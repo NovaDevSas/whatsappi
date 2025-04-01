@@ -1,90 +1,62 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getConnectionPool } from '@/lib/db';
 import { Message } from '@/types';
-
-async function getMessagesForConversation(phoneNumber: string): Promise<Message[]> {
-  try {
-    const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-    const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
-    
-    if (!phoneNumberId || !accessToken) {
-      throw new Error('WhatsApp API configuration is missing');
-    }
-    
-    // Fetch messages from the WhatsApp API
-    const response = await fetch(
-      `https://graph.facebook.com/v17.0/${phoneNumberId}/messages?limit=100`,
-      {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-        },
-      }
-    );
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('WhatsApp API error:', errorData);
-      throw new Error(`WhatsApp API error: ${errorData.error?.message || 'Unknown error'}`);
-    }
-    
-    const data = await response.json();
-    
-    // Filter messages for this specific phone number
-    const messages: Message[] = [];
-    
-    if (data.data && Array.isArray(data.data)) {
-      data.data.forEach((msg: any) => {
-        // Skip messages without proper data
-        if (!msg.from || !msg.to) return;
-        
-        // Determine if this is an incoming or outgoing message
-        const isOutgoing = msg.from.id === phoneNumberId;
-        const msgPhoneNumber = isOutgoing ? msg.to.wa_id : msg.from.wa_id;
-        
-        // Only include messages for the requested phone number
-        if (msgPhoneNumber === phoneNumber) {
-          messages.push({
-            id: msg.id,
-            phoneNumber: msgPhoneNumber,
-            message: msg.text?.body || '',
-            timestamp: msg.timestamp,
-            direction: isOutgoing ? 'outgoing' : 'incoming',
-          });
-        }
-      });
-    }
-    
-    // Sort messages by timestamp (oldest first)
-    return messages.sort((a, b) => 
-      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-    );
-  } catch (error) {
-    console.error('Error fetching real messages:', error);
-    // Fallback to empty array if there's an error
-    return [];
-  }
-}
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const phoneNumber = params.id;
+    // The issue is here - params doesn't need to be awaited, but we need to handle it properly
+    const { id } = params; // Destructure directly instead of using params?.id
+    const conversationId = id;
     
-    if (!phoneNumber) {
+    if (!conversationId) {
       return NextResponse.json(
-        { error: 'Phone number is required' },
+        { error: 'Conversation ID is required' },
         { status: 400 }
       );
     }
     
-    const messages = await getMessagesForConversation(phoneNumber);
+    // Get database connection
+    const pool = await getConnectionPool();
+    
+    // Query to get messages for a specific contact
+    const query = `
+      SELECT 
+        m.id,
+        m.message_wamid,
+        c.wa_id as phone_number,
+        m.text_body,
+        m.timestamp_unix,
+        m.direction
+      FROM 
+        messages m
+      JOIN 
+        contacts c ON m.contact_id = c.id
+      WHERE 
+        c.wa_id = $1
+      ORDER BY 
+        m.timestamp_unix ASC
+    `;
+    
+    const result = await pool.query(query, [conversationId]);
+    console.log(`Found ${result.rows.length} messages for conversation ${conversationId}`);
+    
+    // Transform database results to Message objects
+    const messages: Message[] = result.rows.map((row, index) => ({
+      id: row.message_wamid ? `${row.message_wamid}-${index}` : `${row.id}-${index}`, // Ensure unique IDs
+      phoneNumber: row.phone_number,
+      message: row.text_body,
+      timestamp: new Date(row.timestamp_unix * 1000).toISOString(),
+      direction: row.direction === 'outbound' ? 'outgoing' : 'incoming',
+    }));
     
     return NextResponse.json({ messages });
   } catch (error) {
-    console.error('Error in messages endpoint:', error);
+    console.error('Error fetching conversation messages:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch messages' },
+      { error: 'Failed to fetch conversation messages' },
       { status: 500 }
     );
   }

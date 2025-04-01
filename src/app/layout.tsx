@@ -1,12 +1,12 @@
+import './globals.css';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
-import './globals.css';
 
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'WhatsApp API Manager',
-  description: 'A Next.js application to manage WhatsApp API',
+  description: 'A modern interface for WhatsApp API interactions',
 };
 
 export default function RootLayout({
@@ -16,33 +16,33 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+      </head>
       <body className={inter.className}>
-        <header className="bg-white shadow-sm">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between h-16">
-              <div className="flex">
-                <div className="flex-shrink-0 flex items-center">
-                  <h1 className="text-xl font-bold">WhatsApp API Manager</h1>
+        <div className="min-h-screen flex flex-col">
+          <header className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md">
+            <div className="container mx-auto px-4 py-3">
+              <div className="flex items-center justify-between">
+                <h1 className="text-xl font-bold">WhatsApp API Manager</h1>
+                <div className="flex items-center space-x-4">
+                  <span className="inline-flex items-center px-2 py-1 rounded-full bg-green-500 text-xs font-medium">
+                    <span className="w-2 h-2 mr-1 rounded-full bg-white"></span>
+                    Conectado
+                  </span>
                 </div>
-                <nav className="ml-6 flex space-x-8">
-                  <a
-                    href="/"
-                    className="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                  >
-                    Dashboard
-                  </a>
-                  <a
-                    href="/config"
-                    className="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                  >
-                    Configuration
-                  </a>
-                </nav>
               </div>
             </div>
-          </div>
-        </header>
-        {children}
+          </header>
+          <main className="flex-grow container mx-auto px-4 py-4">
+            {children}
+          </main>
+          <footer className="bg-gray-50 border-t text-center py-3 text-sm text-gray-500">
+            <div className="container mx-auto px-4">
+              WhatsApp API Manager &copy; {new Date().getFullYear()}
+            </div>
+          </footer>
+        </div>
       </body>
     </html>
   );

@@ -6,6 +6,13 @@ export interface Message {
   direction: 'incoming' | 'outgoing';
 }
 
+export interface Contact {
+  id: string;
+  waId: string;  // wa_id en la base de datos
+  profileName: string | null;
+  createdAt: string;
+}
+
 export interface Conversation {
   id: string;
   phoneNumber: string;
