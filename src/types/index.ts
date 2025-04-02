@@ -24,5 +24,6 @@ export interface Conversation {
     text: string;
     timestamp: string;
   };
+  lastMessageTime?: string; // Añadimos esta propiedad para compatibilidad con ContactInfo
   unreadCount: number;
 }

@@ -8,13 +8,14 @@ interface WebSocketContextType {
   lastMessage: Message | null;
 }
 
-const WebSocketContext = createContext<WebSocketContextType>({
-  connected: false,
-  lastMessage: null,
-});
+const WebSocketContext = createContext<WebSocketContextType | undefined>(undefined);
 
 export function useWebSocket() {
-  return useContext(WebSocketContext);
+  const context = useContext(WebSocketContext);
+  if (!context) {
+    throw new Error('useWebSocket must be used within a WebSocketProvider');
+  }
+  return context;
 }
 
 interface WebSocketProviderProps {
@@ -26,53 +27,47 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
   const [lastMessage, setLastMessage] = useState<Message | null>(null);
   
   useEffect(() => {
-    // In a real implementation, you would connect to your WebSocket server
-    // For now, we'll simulate it with a timeout
+    // En una implementación real, conectaríamos a un servidor WebSocket
+    // Por ahora, simulamos con un timeout
     
-    console.log('Connecting to WebSocket...');
+    console.log('Conectando a WebSocket...');
     
-    // Simulate connection delay
+    // Simulamos retraso de conexión
     const connectionTimeout = setTimeout(() => {
-      console.log('WebSocket connected');
+      console.log('WebSocket conectado');
       setConnected(true);
       
-      // Simulate receiving messages periodically
+      // Simulamos recibir mensajes periódicamente
+      // En una implementación real, esto sería manejado por eventos del WebSocket
       const messageInterval = setInterval(() => {
-        // Only simulate messages when connected
-        if (Math.random() > 0.7) { // 30% chance of receiving a message
+        // Simulamos una probabilidad baja de recibir un mensaje
+        if (Math.random() < 0.1) {
           const simulatedMessage: Message = {
-            id: `ws_${Date.now()}`,
-            phoneNumber: '+1234567890', // This would be a real phone number in production
-            message: 'This is a simulated incoming message via WebSocket',
+            id: `sim-${Date.now()}`,
+            phoneNumber: '573002839317', // Número de teléfono de ejemplo
+            message: 'Este es un mensaje simulado recibido a través de WebSocket',
             timestamp: new Date().toISOString(),
             direction: 'incoming',
           };
           
+          console.log('Mensaje recibido vía WebSocket:', simulatedMessage);
           setLastMessage(simulatedMessage);
-          
-          // In a real app, you would dispatch an event or update your state management
-          console.log('Received WebSocket message:', simulatedMessage);
         }
-      }, 30000); // Check every 30 seconds
+      }, 10000); // Verificar cada 10 segundos
       
       return () => {
         clearInterval(messageInterval);
+        console.log('WebSocket desconectado');
       };
-    }, 2000);
+    }, 1500);
     
     return () => {
       clearTimeout(connectionTimeout);
-      console.log('WebSocket disconnected');
     };
   }, []);
   
-  const value = {
-    connected,
-    lastMessage,
-  };
-  
   return (
-    <WebSocketContext.Provider value={value}>
+    <WebSocketContext.Provider value={{ connected, lastMessage }}>
       {children}
     </WebSocketContext.Provider>
   );

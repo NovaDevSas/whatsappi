@@ -2,13 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getConnectionPool } from '@/lib/db';
 import { Message } from '@/types';
 
+// Asegúrate de que esta función esté funcionando correctamente
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    // The issue is here - params doesn't need to be awaited, but we need to handle it properly
-    const { id } = params; // Destructure directly instead of using params?.id
+    const { id } = params;
     const conversationId = id;
     
     if (!conversationId) {
@@ -22,6 +22,7 @@ export async function GET(
     const pool = await getConnectionPool();
     
     // Query to get messages for a specific contact
+    // Verifica que la consulta SQL esté filtrando correctamente por el ID de la conversación
     const query = `
       SELECT 
         m.id,

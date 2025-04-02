@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Conversation, Message } from '@/types';
-import MessageForm from './MessageForm';
+import MessageForm from '../chat/MessageForm';
 
 interface ConversationDetailProps {
   conversation: Conversation | null;
@@ -27,8 +27,11 @@ export default function ConversationDetail({
   }, [conversation]);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    // Only scroll if we have messages and they're not loading
+    if (messages.length > 0 && !loading) {
+      scrollToBottom();
+    }
+  }, [messages, loading]);
 
   const fetchMessages = async (conversationId: string) => {
     try {

@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { Conversation, Message } from '@/types';
 
 interface ConversationContextType {
@@ -16,16 +16,16 @@ interface ConversationContextType {
     messages: string | null;
   };
   selectConversation: (conversation: Conversation) => void;
+  refreshConversations: () => Promise<void>;
+  refreshMessages: () => Promise<void>;
   sendMessage: (phoneNumber: string, message: string) => Promise<{ success: boolean; error?: string }>;
-  refreshConversations: () => void;
-  refreshMessages: () => void;
 }
 
 const ConversationContext = createContext<ConversationContextType | undefined>(undefined);
 
 export function useConversations() {
   const context = useContext(ConversationContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useConversations must be used within a ConversationProvider');
   }
   return context;
@@ -40,31 +40,33 @@ export function ConversationProvider({ children }: ConversationProviderProps) {
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState({
-    conversations: false,
+    conversations: true,
     messages: false,
   });
   const [error, setError] = useState({
     conversations: null as string | null,
     messages: null as string | null,
   });
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [messageRefreshTrigger, setMessageRefreshTrigger] = useState(0);
 
-  // Fetch conversations
+  // Fetch conversations on initial load
   useEffect(() => {
-    fetchConversations();
-  }, [refreshTrigger]);
+    refreshConversations();
+  }, []);
 
-  // Fetch messages when selected conversation changes
+  // Fetch messages when a conversation is selected
   useEffect(() => {
     if (selectedConversation) {
-      fetchMessages(selectedConversation.id);
+      refreshMessages();
     } else {
       setMessages([]);
     }
-  }, [selectedConversation, messageRefreshTrigger]);
+  }, [selectedConversation]);
 
-  const fetchConversations = async () => {
+  const selectConversation = (conversation: Conversation) => {
+    setSelectedConversation(conversation);
+  };
+
+  const refreshConversations = async () => {
     try {
       setLoading(prev => ({ ...prev, conversations: true }));
       setError(prev => ({ ...prev, conversations: null }));
@@ -77,28 +79,23 @@ export function ConversationProvider({ children }: ConversationProviderProps) {
       }
       
       const data = await response.json();
+      setConversations(data.conversations);
       
-      if (data.conversations && Array.isArray(data.conversations)) {
-        setConversations(data.conversations);
+      // If the selected conversation exists, update it with fresh data
+      if (selectedConversation) {
+        const updatedConversation = data.conversations.find(
+          (c: Conversation) => c.id === selectedConversation.id
+        );
         
-        // If we have a selected conversation, update it with fresh data
-        if (selectedConversation) {
-          const updatedConversation = data.conversations.find(
-            (c: Conversation) => c.id === selectedConversation.id
-          );
-          if (updatedConversation) {
-            setSelectedConversation(updatedConversation);
-          }
+        if (updatedConversation) {
+          setSelectedConversation(updatedConversation);
         }
-      } else {
-        console.warn('Unexpected response format:', data);
-        setConversations([]);
       }
-    } catch (err) {
-      console.error('Error fetching conversations:', err);
-      setError(prev => ({
-        ...prev,
-        conversations: err instanceof Error ? err.message : 'Failed to load conversations'
+    } catch (error) {
+      console.error('Error fetching conversations:', error);
+      setError(prev => ({ 
+        ...prev, 
+        conversations: error instanceof Error ? error.message : 'Failed to fetch conversations' 
       }));
     } finally {
       setLoading(prev => ({ ...prev, conversations: false }));
@@ -118,23 +115,26 @@ export function ConversationProvider({ children }: ConversationProviderProps) {
       }
       
       const data = await response.json();
-      
-      if (data.messages && Array.isArray(data.messages)) {
-        setMessages(data.messages);
-      } else {
-        console.warn('Unexpected response format:', data);
-        setMessages([]);
-      }
-    } catch (err) {
-      console.error('Error fetching messages:', err);
-      setError(prev => ({
-        ...prev,
-        messages: err instanceof Error ? err.message : 'Failed to load messages'
+      setMessages(data.messages || []);
+      return data.messages;
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+      setError(prev => ({ 
+        ...prev, 
+        messages: error instanceof Error ? error.message : 'Failed to fetch messages' 
       }));
+      return [];
     } finally {
       setLoading(prev => ({ ...prev, messages: false }));
     }
   };
+
+  // Fix the refreshMessages implementation with useCallback
+  const refreshMessages = useCallback(async () => {
+    if (selectedConversation) {
+      await fetchMessages(selectedConversation.id);
+    }
+  }, [selectedConversation]);
 
   const sendMessage = async (phoneNumber: string, message: string) => {
     try {
@@ -148,44 +148,27 @@ export function ConversationProvider({ children }: ConversationProviderProps) {
       
       const data = await response.json();
       
-      if (response.ok) {
-        // Add the sent message to the UI immediately
-        const newMessage: Message = {
-          id: `temp_${Date.now()}`,
-          phoneNumber,
-          message,
-          timestamp: new Date().toISOString(),
-          direction: 'outgoing',
+      if (!response.ok) {
+        return { 
+          success: false, 
+          error: data.error || 'Failed to send message' 
         };
-        
-        setMessages(prev => [...prev, newMessage]);
-        
-        // Refresh conversations to update last message
-        refreshConversations();
-        
-        return { success: true };
-      } else {
-        return { success: false, error: data.error || 'Failed to send message' };
       }
+      
+      // Refresh messages after sending
+      await refreshMessages();
+      
+      // Also refresh conversations to update last message
+      await refreshConversations();
+      
+      return { success: true };
     } catch (error) {
       console.error('Error sending message:', error);
       return { 
         success: false, 
-        error: error instanceof Error ? error.message : 'An error occurred while sending the message' 
+        error: error instanceof Error ? error.message : 'Failed to send message' 
       };
     }
-  };
-
-  const selectConversation = (conversation: Conversation) => {
-    setSelectedConversation(conversation);
-  };
-
-  const refreshConversations = () => {
-    setRefreshTrigger(prev => prev + 1);
-  };
-
-  const refreshMessages = () => {
-    setMessageRefreshTrigger(prev => prev + 1);
   };
 
   const value = {
@@ -195,9 +178,9 @@ export function ConversationProvider({ children }: ConversationProviderProps) {
     loading,
     error,
     selectConversation,
-    sendMessage,
     refreshConversations,
     refreshMessages,
+    sendMessage,
   };
 
   return (
