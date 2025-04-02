@@ -78,6 +78,83 @@ export default function ChatPanel() {
     );
   }
 
+  // Función para agrupar mensajes por fecha
+  const groupMessagesByDate = (messages) => {
+    // Ordenar mensajes por timestamp
+    const sortedMessages = [...messages].sort((a, b) => 
+      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
+    
+    const groups = [];
+    let currentDate = null;
+    let currentGroup = [];
+    
+    sortedMessages.forEach(message => {
+      const messageDate = new Date(message.timestamp);
+      
+      // Verificar que la fecha es válida
+      if (isNaN(messageDate.getTime())) {
+        console.warn('Invalid timestamp:', message.timestamp);
+        return;
+      }
+      
+      // Formato YYYY-MM-DD para comparación consistente
+      const dateStr = messageDate.toISOString().split('T')[0];
+      
+      if (dateStr !== currentDate) {
+        // Si tenemos un grupo actual, lo guardamos
+        if (currentDate && currentGroup.length > 0) {
+          groups.push({
+            date: currentDate,
+            messages: [...currentGroup]
+          });
+        }
+        
+        // Iniciamos un nuevo grupo
+        currentDate = dateStr;
+        currentGroup = [message];
+      } else {
+        // Añadimos al grupo actual
+        currentGroup.push(message);
+      }
+    });
+    
+    // No olvidar añadir el último grupo
+    if (currentDate && currentGroup.length > 0) {
+      groups.push({
+        date: currentDate,
+        messages: currentGroup
+      });
+    }
+    
+    return groups;
+  };
+  
+  // Función para obtener un texto legible de la fecha
+  const getReadableDate = (dateStr) => {
+    // Convertir de formato ISO (YYYY-MM-DD) a Date
+    const date = new Date(dateStr);
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    if (date.toDateString() === today.toDateString()) {
+      return "Hoy";
+    } else if (date.toDateString() === yesterday.toDateString()) {
+      return "Ayer";
+    } else {
+      // Formato más amigable: "1 de enero de 2023"
+      return date.toLocaleDateString('es-ES', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      });
+    }
+  };
+
   return (
     <div className="flex-1 flex">
       <div className={`flex-1 flex flex-col ${showContactInfo ? 'hidden md:flex' : 'flex'}`}>
@@ -120,31 +197,48 @@ export default function ChatPanel() {
           ) : messages.length === 0 ? (
             <div className="text-gray-500 text-center p-4">No hay mensajes aún</div>
           ) : (
-            <div className="space-y-3">
-              {messages.map((msg) => {
-                // Ensure we're handling message correctly whether it's a string or an object
-                const messageText = typeof msg.message === 'object' 
-                  ? msg.message.text 
-                  : msg.message;
-                  
-                return (
-                  <div
-                    key={msg.id}
-                    className={`max-w-xs md:max-w-md lg:max-w-lg rounded-lg p-3 ${
-                      msg.direction === 'outgoing'
-                        ? 'ml-auto bg-purple-500 text-white'
-                        : 'mr-auto bg-white text-gray-800'
-                    }`}
-                  >
-                    <p>{messageText}</p>
-                    <p className={`text-xs mt-1 text-right ${
-                      msg.direction === 'outgoing' ? 'text-purple-100' : 'text-gray-500'
-                    }`}>
-                      {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </p>
+            <div className="space-y-8">
+              {groupMessagesByDate(messages).map((group, groupIndex) => (
+                <div key={group.date} className="relative pt-10 pb-3">
+                  {/* Separador de fecha más visible y con mejor tamaño */}
+                  <div className="absolute top-0 inset-x-0 flex items-center justify-center">
+                    <div className="bg-purple-600 text-white px-6 py-2 rounded-full shadow-md text-sm font-medium">
+                      {getReadableDate(group.date)}
+                    </div>
                   </div>
-                );
-              })}
+                  
+                  <div className="space-y-4 mt-6">
+                    {group.messages.map((msg) => {
+                      // Ensure we're handling message correctly whether it's a string or an object
+                      const messageText = typeof msg.message === 'object' 
+                        ? msg.message.text 
+                        : msg.message;
+                        
+                      return (
+                        <div 
+                          key={msg.id}
+                          className={`flex ${msg.direction === 'outgoing' ? 'justify-end' : 'justify-start'}`}
+                        >
+                          <div 
+                            className={`max-w-xs md:max-w-md lg:max-w-lg rounded-lg px-5 py-3.5 ${
+                              msg.direction === 'outgoing' 
+                                ? 'bg-purple-500 text-white' 
+                                : 'bg-white border border-gray-200'
+                            }`}
+                          >
+                            <div className="text-base leading-relaxed">{messageText}</div>
+                            <div className={`text-xs mt-1.5 text-right ${
+                              msg.direction === 'outgoing' ? 'text-purple-100' : 'text-gray-500'
+                            }`}>
+                              {new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
               <div ref={messagesEndRef} />
             </div>
           )}
