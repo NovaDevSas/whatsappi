@@ -9,11 +9,18 @@ interface ConversationDetailProps {
   onSendMessage: (phoneNumber: string, message: string) => Promise<{ success: boolean; error?: string }>;
 }
 
+// Add interface for message groups
+interface MessageGroup {
+  date: string;
+  messages: Message[];
+}
+
 export default function ConversationDetail({ 
   conversation, 
   onSendMessage 
 }: ConversationDetailProps) {
   const [messages, setMessages] = useState<Message[]>([]);
+  const [messageGroups, setMessageGroups] = useState<MessageGroup[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -23,8 +30,18 @@ export default function ConversationDetail({
       fetchMessages(conversation.id);
     } else {
       setMessages([]);
+      setMessageGroups([]);
     }
   }, [conversation]);
+
+  useEffect(() => {
+    // Group messages by date whenever messages change
+    if (messages.length > 0) {
+      setMessageGroups(groupMessagesByDate(messages));
+    } else {
+      setMessageGroups([]);
+    }
+  }, [messages]);
 
   useEffect(() => {
     // Only scroll if we have messages and they're not loading
@@ -61,6 +78,83 @@ export default function ConversationDetail({
     }
   };
 
+  // Add function to group messages by date
+  const groupMessagesByDate = (messages: Message[]): MessageGroup[] => {
+    // Sort messages by timestamp
+    const sortedMessages = [...messages].sort((a, b) => 
+      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
+    
+    const groups: MessageGroup[] = [];
+    let currentDate: string | null = null;
+    let currentGroup: Message[] = [];
+    
+    sortedMessages.forEach(message => {
+      const messageDate = new Date(message.timestamp);
+      
+      // Verify date is valid
+      if (isNaN(messageDate.getTime())) {
+        console.warn('Invalid timestamp:', message.timestamp);
+        return;
+      }
+      
+      // Format YYYY-MM-DD for consistent comparison
+      const dateStr = messageDate.toISOString().split('T')[0];
+      
+      if (dateStr !== currentDate) {
+        // If we have a current group, save it
+        if (currentDate && currentGroup.length > 0) {
+          groups.push({
+            date: currentDate,
+            messages: [...currentGroup]
+          });
+        }
+        
+        // Start a new group
+        currentDate = dateStr;
+        currentGroup = [message];
+      } else {
+        // Add to current group
+        currentGroup.push(message);
+      }
+    });
+    
+    // Don't forget to add the last group
+    if (currentDate && currentGroup.length > 0) {
+      groups.push({
+        date: currentDate,
+        messages: currentGroup
+      });
+    }
+    
+    return groups;
+  };
+
+  // Add function to get readable date format
+  const getReadableDate = (dateStr: string): string => {
+    // Convert from ISO format (YYYY-MM-DD) to Date
+    const date = new Date(dateStr);
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    if (date.toDateString() === today.toDateString()) {
+      return "Hoy";
+    } else if (date.toDateString() === yesterday.toDateString()) {
+      return "Ayer";
+    } else {
+      // More friendly format: "1 de enero de 2023"
+      return date.toLocaleDateString('es-ES', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      });
+    }
+  };
+
   const handleSendMessage = async (phoneNumber: string, message: string) => {
     const result = await onSendMessage(phoneNumber, message);
     
@@ -74,10 +168,12 @@ export default function ConversationDetail({
         direction: 'outgoing',
       };
       
-      setMessages((prev) => [...prev, newMessage]);
+      setMessages(prevMessages => [...prevMessages, newMessage]);
       
-      // Optionally, refetch messages to ensure consistency
-      // fetchMessages(conversation.id);
+      // Refresh messages to get the server-generated ID
+      setTimeout(() => {
+        fetchMessages(conversation.id);
+      }, 1000);
     }
     
     return result;
@@ -89,86 +185,82 @@ export default function ConversationDetail({
 
   if (!conversation) {
     return (
-      <div className="flex flex-col items-center justify-center h-full p-8 text-center">
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-        </svg>
-        <h3 className="text-lg font-medium text-gray-500">Select a conversation</h3>
-        <p className="text-gray-400 mt-1">Choose a contact from the list to view messages</p>
+      <div className="flex-1 flex items-center justify-center bg-gray-50 p-6">
+        <p className="text-gray-500">Selecciona una conversación para ver los mensajes</p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-lg shadow overflow-hidden">
-      {conversation ? (
-        <>
-          <div className="p-4 border-b border-gray-200 bg-white">
-            <div className="flex items-center">
-              <div className="flex-shrink-0 h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium">
-                {conversation.phoneNumber[0].toUpperCase()}
-              </div>
-              <div className="ml-3">
-                <h2 className="text-lg font-medium text-gray-900">
-                  {conversation.phoneNumber}
-                </h2>
-              </div>
-            </div>
+    <div className="flex-1 flex flex-col bg-white">
+      {/* Header */}
+      <div className="px-6 py-4 border-b border-gray-200 flex items-center">
+        <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-medium mr-3">
+          {(conversation.contact?.name || conversation.phoneNumber)[0].toUpperCase()}
+        </div>
+        <div>
+          <h2 className="text-lg font-medium text-gray-900">
+            {conversation.contact?.name || conversation.phoneNumber}
+          </h2>
+        </div>
+      </div>
+      
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto p-6">
+        {loading ? (
+          <div className="flex justify-center items-center h-full">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
           </div>
-          
-          <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
-            {loading ? (
-              <div className="flex justify-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-400"></div>
-              </div>
-            ) : error ? (
-              <div className="text-red-500">{error}</div>
-            ) : (
-              <div className="space-y-3">
-                {messages.map((message) => (
-                  <div
-                    key={message.id}
+        ) : error ? (
+          <div className="text-red-500 text-center">{error}</div>
+        ) : messageGroups.length === 0 ? (
+          <div className="text-gray-500 text-center">No hay mensajes aún</div>
+        ) : (
+          <div className="space-y-6">
+            {messageGroups.map((group, groupIndex) => (
+              <div key={group.date} className="space-y-4">
+                {/* Date header */}
+                <div className="flex justify-center">
+                  <div className="bg-gray-100 text-gray-600 text-sm px-4 py-1 rounded-full">
+                    {getReadableDate(group.date)}
+                  </div>
+                </div>
+                
+                {/* Messages in this group */}
+                {group.messages.map((message, messageIndex) => (
+                  <div 
+                    key={`${message.id}-${messageIndex}`} 
                     className={`flex ${message.direction === 'outgoing' ? 'justify-end' : 'justify-start'}`}
                   >
-                    <div
-                      className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                        message.direction === 'outgoing'
-                          ? 'bg-blue-500 text-white'
-                          : 'bg-white text-gray-800 border border-gray-200'
+                    <div 
+                      className={`max-w-[70%] p-4 rounded-lg ${
+                        message.direction === 'outgoing' 
+                          ? 'bg-purple-100 text-purple-900' 
+                          : 'bg-gray-100 text-gray-900'
                       }`}
                     >
                       <p>{message.message}</p>
-                      <p className="text-xs mt-1 opacity-70">
-                        {new Date(message.timestamp).toLocaleTimeString()}
+                      <p className="text-xs text-gray-500 mt-1 text-right">
+                        {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </p>
                     </div>
                   </div>
                 ))}
-                <div ref={messagesEndRef} />
               </div>
-            )}
+            ))}
+            <div ref={messagesEndRef} />
           </div>
-          
-          <div className="p-4 border-t border-gray-200 bg-white">
-            <MessageForm 
-              onSendMessage={handleSendMessage} 
-              hidePhoneNumber={true} 
-              initialPhoneNumber={conversation.phoneNumber} 
-            />
-          </div>
-        </>
-      ) : (
-        <div className="flex-1 flex items-center justify-center p-8 text-center">
-          <div>
-            <h3 className="text-lg font-medium text-gray-900">
-              No conversation selected
-            </h3>
-            <p className="mt-1 text-gray-500">
-              Select a conversation from the list to view messages
-            </p>
-          </div>
-        </div>
-      )}
+        )}
+      </div>
+      
+      {/* Message Form */}
+      <div className="border-t border-gray-200 p-4">
+        <MessageForm 
+          onSendMessage={handleSendMessage} 
+          hidePhoneNumber={true}
+          initialPhoneNumber={conversation.phoneNumber}
+        />
+      </div>
     </div>
   );
 }
