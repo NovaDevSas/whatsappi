@@ -4,13 +4,12 @@ import { useConversations } from '@/contexts/ConversationContext';
 export default function ConversationPanel() {
   const { 
     conversations, 
-    selectedConversation, 
-    selectConversation, 
-    loading, 
-    error 
+    activeConversation: selectedConversation, 
+    setActiveConversation: selectConversation
   } = useConversations();
   
   const [searchQuery, setSearchQuery] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const filteredConversations = conversations.filter(conversation => {
     const name = conversation.contact?.name || conversation.phoneNumber;
@@ -49,12 +48,12 @@ export default function ConversationPanel() {
       
       {/* Lista de conversaciones con mejor espaciado y diseño minimalista */}
       <div className="px-3">
-        {loading.conversations ? (
+        {isLoading ? (
           <div className="flex justify-center items-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
           </div>
-        ) : error.conversations ? (
-          <div className="text-red-500 text-center py-4">{error.conversations}</div>
+        ) : conversations.length === 0 ? (
+          <div className="text-gray-500 text-center py-8">No conversations found</div>
         ) : filteredConversations.length === 0 ? (
           <div className="text-gray-500 text-center py-8">No conversations found</div>
         ) : (

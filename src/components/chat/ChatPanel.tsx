@@ -1,159 +1,78 @@
-import { useState, useRef, useEffect } from 'react';
-import Image from 'next/image';
+import React, { useRef, useEffect, useState } from 'react';
 import { useConversations } from '@/contexts/ConversationContext';
-import { formatPhoneNumber } from '@/lib/utils';
-import ContactInfo from './ContactInfo'; // This import is correct if both files are in the same directory
+import { useWebSocket } from '@/contexts/WebSocketContext';
 
 export default function ChatPanel() {
-  const { 
-    selectedConversation, 
-    messages, 
-    loading, 
-    error, 
-    sendMessage 
-  } = useConversations();
-  
+  const { activeConversation, messages, sendMessage, refreshMessages } = useConversations();
+  const { isConnected, lastMessage } = useWebSocket();
   const [newMessage, setNewMessage] = useState('');
-  const [sendingMessage, setSendingMessage] = useState(false);
-  const [sendError, setSendError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [showContactInfo, setShowContactInfo] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
+  
   // Scroll to bottom when messages change
   useEffect(() => {
-    // Only scroll if we have messages and they've loaded
-    if (messages.length > 0 && !loading.messages) {
+    if (messages.length > 0) {
       scrollToBottom();
     }
-  }, [messages, loading.messages]);
-
+  }, [messages]);
+  
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
-
+  
+  const handleRefreshMessages = async () => {
+    if (!activeConversation) return;
+    
+    setIsLoadingMessages(true);
+    try {
+      await refreshMessages();
+      setLastRefresh(new Date());
+    } finally {
+      setIsLoadingMessages(false);
+      // Scroll to bottom after messages are loaded
+      setTimeout(scrollToBottom, 100);
+    }
+  };
+  
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedConversation || !newMessage.trim()) return;
+    if (!newMessage.trim() || !activeConversation) return;
+    
+    setIsLoading(true);
+    setSendError(null); // Clear any previous errors
     
     try {
-      setSendingMessage(true);
-      setSendError(null);
-      
-      const result = await sendMessage(selectedConversation.phoneNumber, newMessage);
-      
-      if (result.success) {
-        setNewMessage(''); // Clear input after successful send
+      const success = await sendMessage(activeConversation.phoneNumber, newMessage);
+      if (success) {
+        setNewMessage('');
+        setLastRefresh(new Date());
       } else {
-        setSendError(result.error || 'Error al enviar el mensaje');
+        setSendError('Failed to send message. Please try again.');
       }
     } catch (error) {
-      console.error('Error en el manejador de envío de mensajes:', error);
-      setSendError('Error al enviar el mensaje');
+      console.error('Error sending message:', error);
+      setSendError('An error occurred while sending the message.');
     } finally {
-      setSendingMessage(false);
+      setIsLoading(false);
     }
   };
 
   // If no conversation is selected, show a placeholder
-  if (!selectedConversation) {
+  if (!activeConversation) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center bg-gray-50 p-8">
         <div className="text-center">
-          <div className="mb-4">
-            <Image 
-              src="/images/logonova.webp" 
-              alt="Nova Dev Logo" 
-              width={180} 
-              height={180} 
-              className="mx-auto"
-            />
-          </div>
-          <h2 className="text-xl font-semibold text-gray-700 mb-2">Bienvenido a WhatsApp API Manager</h2>
-          <p className="text-gray-500 max-w-md">
-            Selecciona una conversación de la lista para ver los mensajes y comenzar a chatear.
-          </p>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No conversation selected</h3>
+          <p className="text-gray-500">Select a conversation from the list or start a new one</p>
         </div>
       </div>
     );
   }
-
-  // Función para agrupar mensajes por fecha
-  const groupMessagesByDate = (messages) => {
-    // Ordenar mensajes por timestamp
-    const sortedMessages = [...messages].sort((a, b) => 
-      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-    );
-    
-    const groups = [];
-    let currentDate = null;
-    let currentGroup = [];
-    
-    sortedMessages.forEach(message => {
-      const messageDate = new Date(message.timestamp);
-      
-      // Verificar que la fecha es válida
-      if (isNaN(messageDate.getTime())) {
-        console.warn('Invalid timestamp:', message.timestamp);
-        return;
-      }
-      
-      // Formato YYYY-MM-DD para comparación consistente
-      const dateStr = messageDate.toISOString().split('T')[0];
-      
-      if (dateStr !== currentDate) {
-        // Si tenemos un grupo actual, lo guardamos
-        if (currentDate && currentGroup.length > 0) {
-          groups.push({
-            date: currentDate,
-            messages: [...currentGroup]
-          });
-        }
-        
-        // Iniciamos un nuevo grupo
-        currentDate = dateStr;
-        currentGroup = [message];
-      } else {
-        // Añadimos al grupo actual
-        currentGroup.push(message);
-      }
-    });
-    
-    // No olvidar añadir el último grupo
-    if (currentDate && currentGroup.length > 0) {
-      groups.push({
-        date: currentDate,
-        messages: currentGroup
-      });
-    }
-    
-    return groups;
-  };
-  
-  // Función para obtener un texto legible de la fecha
-  const getReadableDate = (dateStr) => {
-    // Convertir de formato ISO (YYYY-MM-DD) a Date
-    const date = new Date(dateStr);
-    
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    
-    if (date.toDateString() === today.toDateString()) {
-      return "Hoy";
-    } else if (date.toDateString() === yesterday.toDateString()) {
-      return "Ayer";
-    } else {
-      // Formato más amigable: "1 de enero de 2023"
-      return date.toLocaleDateString('es-ES', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
-      });
-    }
-  };
 
   return (
     <div className="flex-1 flex">
@@ -162,80 +81,75 @@ export default function ChatPanel() {
         <div className="bg-white border-b border-gray-200 px-4 py-3 flex justify-between items-center">
           <div className="flex items-center">
             <div 
-              className="w-10 h-10 rounded-full bg-purple-500 flex items-center justify-center text-white font-medium mr-3 cursor-pointer"
+              className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-medium mr-3 cursor-pointer"
               onClick={() => setShowContactInfo(true)}
             >
-              {selectedConversation.contact?.name?.[0]?.toUpperCase() || selectedConversation.phoneNumber[0]}
+              {activeConversation.contact?.name?.[0]?.toUpperCase() || activeConversation.phoneNumber[0]}
             </div>
             <div>
               <h2 className="font-medium text-gray-800">
-                {selectedConversation.contact?.name || formatPhoneNumber(selectedConversation.phoneNumber)}
+                {activeConversation.contact?.name || activeConversation.phoneNumber}
               </h2>
-              <p className="text-xs text-gray-500">
-                {loading.messages ? 'Cargando...' : messages.length > 0 ? 'En línea' : 'Toca para ver información de contacto'}
-              </p>
             </div>
           </div>
-          <button 
-            onClick={() => setShowContactInfo(!showContactInfo)}
-            className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </button>
+          <div className="flex items-center">
+            {isConnected ? (
+              <span className="text-xs text-green-500 flex items-center mr-3">
+                <span className="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
+                Connected
+              </span>
+            ) : (
+              <span className="text-xs text-red-500 flex items-center mr-3">
+                <span className="w-2 h-2 bg-red-500 rounded-full mr-1"></span>
+                Disconnected
+              </span>
+            )}
+            {lastRefresh && (
+              <span className="text-xs text-gray-500 mr-3">
+                Last updated: {lastRefresh.toLocaleTimeString()}
+              </span>
+            )}
+            <button 
+              onClick={() => handleRefreshMessages()}
+              className="p-2 rounded-full hover:bg-gray-100 text-gray-500"
+              disabled={isLoadingMessages}
+              title="Refresh messages"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${isLoadingMessages ? 'animate-spin' : ''}`} viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
+              </svg>
+            </button>
+          </div>
         </div>
         
         {/* Messages */}
         <div className="flex-1 bg-gray-100 p-4 overflow-y-auto">
-          {loading.messages ? (
+          {isLoadingMessages ? (
             <div className="flex justify-center items-center h-full">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
             </div>
-          ) : error.messages ? (
-            <div className="text-red-500 text-center p-4">{error.messages}</div>
           ) : messages.length === 0 ? (
-            <div className="text-gray-500 text-center p-4">No hay mensajes aún</div>
+            <div className="flex justify-center items-center h-full">
+              <p className="text-gray-500">No messages yet</p>
+            </div>
           ) : (
-            <div className="space-y-8">
-              {groupMessagesByDate(messages).map((group, groupIndex) => (
-                <div key={group.date} className="relative pt-10 pb-3">
-                  {/* Separador de fecha más visible y con mejor tamaño */}
-                  <div className="absolute top-0 inset-x-0 flex items-center justify-center">
-                    <div className="bg-purple-600 text-white px-6 py-2 rounded-full shadow-md text-sm font-medium">
-                      {getReadableDate(group.date)}
+            <div className="space-y-4">
+              {messages.map((msg) => (
+                <div
+                  key={msg.id}
+                  className={`flex ${msg.direction === 'outgoing' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div
+                    className={`max-w-[75%] rounded-lg px-4 py-2 ${
+                      msg.direction === 'outgoing' 
+                        ? 'bg-purple-600 text-white' 
+                        : 'bg-white text-gray-800 border border-gray-200'
+                    }`}
+                  >
+                    <p>{msg.message}</p>
+                    <div className={`text-xs mt-1 ${msg.direction === 'outgoing' ? 'text-purple-200' : 'text-gray-500'}`}>
+                      {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </div>
-                  </div>
-                  
-                  <div className="space-y-4 mt-6">
-                    {group.messages.map((msg) => {
-                      // Ensure we're handling message correctly whether it's a string or an object
-                      const messageText = typeof msg.message === 'object' 
-                        ? msg.message.text 
-                        : msg.message;
-                        
-                      return (
-                        <div 
-                          key={msg.id}
-                          className={`flex ${msg.direction === 'outgoing' ? 'justify-end' : 'justify-start'}`}
-                        >
-                          <div 
-                            className={`max-w-xs md:max-w-md lg:max-w-lg rounded-lg px-5 py-3.5 ${
-                              msg.direction === 'outgoing' 
-                                ? 'bg-purple-500 text-white' 
-                                : 'bg-white border border-gray-200'
-                            }`}
-                          >
-                            <div className="text-base leading-relaxed">{messageText}</div>
-                            <div className={`text-xs mt-1.5 text-right ${
-                              msg.direction === 'outgoing' ? 'text-purple-100' : 'text-gray-500'
-                            }`}>
-                              {new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
                   </div>
                 </div>
               ))}
@@ -256,47 +170,57 @@ export default function ChatPanel() {
               type="text"
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
-              placeholder="Escribe un mensaje..."
-              disabled={sendingMessage}
-              className="flex-1 border border-gray-300 rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-100"
+              placeholder="Type a message..."
+              className="flex-1 border border-gray-300 rounded-l-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
             <button
               type="submit"
-              disabled={!newMessage.trim() || sendingMessage}
-              className={`ml-2 p-2 rounded-full ${
-                !newMessage.trim() || sendingMessage
-                  ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                  : 'bg-purple-500 text-white hover:bg-purple-600'
+              disabled={isLoading || !newMessage.trim()}
+              className={`bg-purple-600 text-white px-4 py-2 rounded-r-lg ${
+                isLoading || !newMessage.trim() ? 'opacity-50 cursor-not-allowed' : 'hover:bg-purple-700'
               }`}
             >
-              {sendingMessage ? (
-                <div className="h-5 w-5 animate-spin rounded-full border-2 border-t-transparent border-white"></div>
+              {isLoading ? (
+                <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
               ) : (
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z"
-                    clipRule="evenodd"
-                  />
-                </svg>
+                'Send'
               )}
             </button>
           </form>
         </div>
       </div>
       
-      {/* Contact Info Panel - Visible on mobile when showContactInfo is true, always visible on desktop if true */}
+      {/* Contact info panel */}
       {showContactInfo && (
-        <div className={`${showContactInfo ? 'block w-full md:w-80' : 'hidden'}`}>
-          <ContactInfo 
-            conversation={selectedConversation} 
-            onClose={() => setShowContactInfo(false)} 
-          />
+        <div className="w-80 border-l border-gray-200 bg-white p-4">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-medium text-gray-900">Contact Info</h3>
+            <button 
+              onClick={() => setShowContactInfo(false)}
+              className="p-2 rounded-full hover:bg-gray-100 text-gray-500"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            </button>
+          </div>
+          
+          <div className="flex flex-col items-center mb-6">
+            <div className="w-24 h-24 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 text-3xl font-medium mb-3">
+              {activeConversation.contact?.name?.[0]?.toUpperCase() || activeConversation.phoneNumber[0]}
+            </div>
+            <h4 className="text-xl font-medium text-gray-900">
+              {activeConversation.contact?.name || 'Unknown'}
+            </h4>
+            <p className="text-gray-500">{activeConversation.phoneNumber}</p>
+          </div>
+          
+          <div className="border-t border-gray-200 pt-4">
+            <h5 className="text-sm font-medium text-gray-500 mb-2">About</h5>
+            <p className="text-gray-700">
+              {activeConversation.contact?.name ? `Contact from WhatsApp` : 'No information available'}
+            </p>
+          </div>
         </div>
       )}
     </div>
