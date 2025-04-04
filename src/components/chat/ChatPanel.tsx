@@ -4,7 +4,7 @@ import { useWebSocket } from '@/contexts/WebSocketContext';
 
 export default function ChatPanel() {
   const { activeConversation, messages, sendMessage, refreshMessages } = useConversations();
-  const { isConnected, lastMessage } = useWebSocket();
+  const { isConnected, lastMessage, notificationsEnabled, toggleNotifications } = useWebSocket();
   const [newMessage, setNewMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
@@ -74,6 +74,55 @@ export default function ChatPanel() {
     );
   }
 
+  // Add this new function to test notifications
+  const testNotification = () => {
+    console.log('Testing notification...');
+    
+    if (!('Notification' in window)) {
+      alert('This browser does not support notifications');
+      return;
+    }
+    
+    console.log('Current notification permission:', Notification.permission);
+    
+    if (Notification.permission === 'granted') {
+      showTestNotification();
+    } else if (Notification.permission !== 'denied') {
+      Notification.requestPermission().then(permission => {
+        console.log('Permission response:', permission);
+        if (permission === 'granted') {
+          showTestNotification();
+        } else {
+          alert('Notification permission was not granted');
+        }
+      });
+    } else {
+      alert('Notification permission denied. Please enable notifications in your browser settings.');
+    }
+  };
+  
+  // Separate function to show the test notification
+  const showTestNotification = () => {
+    try {
+      const notification = new Notification('Test Notification', {
+        body: 'This is a test notification from WhatsApp',
+        icon: '/favicon.ico'
+      });
+      
+      // Auto close after 5 seconds
+      setTimeout(() => notification.close(), 5000);
+      
+      // Handle click
+      notification.onclick = () => {
+        window.focus();
+        notification.close();
+      };
+    } catch (error) {
+      console.error('Error creating notification:', error);
+      alert('Error creating notification: ' + error);
+    }
+  };
+
   return (
     <div className="flex-1 flex">
       <div className={`flex-1 flex flex-col ${showContactInfo ? 'hidden md:flex' : 'flex'}`}>
@@ -109,6 +158,34 @@ export default function ChatPanel() {
                 Last updated: {lastRefresh.toLocaleTimeString()}
               </span>
             )}
+            {/* Test notification button */}
+            <button 
+              onClick={testNotification}
+              className="p-2 rounded-full hover:bg-gray-100 text-gray-500 mr-2"
+              title="Test Notification"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-orange-500" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
+                <path d="M10 4a1 1 0 011 1v1a1 1 0 11-2 0V5a1 1 0 011-1z" />
+              </svg>
+            </button>
+            {/* Notification toggle button */}
+            <button 
+              onClick={toggleNotifications}
+              className="p-2 rounded-full hover:bg-gray-100 text-gray-500 mr-2"
+              title={notificationsEnabled ? "Disable notifications" : "Enable notifications"}
+            >
+              {notificationsEnabled ? (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
+                </svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
+                  <line x1="3" y1="3.5" x2="17" y2="3.5" stroke="currentColor" strokeWidth="1.5" />
+                </svg>
+              )}
+            </button>
             <button 
               onClick={() => handleRefreshMessages()}
               className="p-2 rounded-full hover:bg-gray-100 text-gray-500"
@@ -116,7 +193,7 @@ export default function ChatPanel() {
               title="Refresh messages"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${isLoadingMessages ? 'animate-spin' : ''}`} viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
+                <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
               </svg>
             </button>
           </div>
