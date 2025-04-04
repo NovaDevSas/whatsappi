@@ -1,74 +1,71 @@
-'use client';
+"use client";
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { io, Socket } from 'socket.io-client';
 import { Message } from '@/types';
 
 interface WebSocketContextType {
-  connected: boolean;
+  socket: Socket | null;
+  isConnected: boolean;
   lastMessage: Message | null;
 }
 
-const WebSocketContext = createContext<WebSocketContextType | undefined>(undefined);
+const WebSocketContext = createContext<WebSocketContextType>({
+  socket: null,
+  isConnected: false,
+  lastMessage: null,
+});
 
-export function useWebSocket() {
-  const context = useContext(WebSocketContext);
-  if (!context) {
-    throw new Error('useWebSocket must be used within a WebSocketProvider');
-  }
-  return context;
-}
+export const useWebSocket = () => useContext(WebSocketContext);
 
-interface WebSocketProviderProps {
-  children: ReactNode;
-}
-
-export function WebSocketProvider({ children }: WebSocketProviderProps) {
-  const [connected, setConnected] = useState(false);
+export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
   const [lastMessage, setLastMessage] = useState<Message | null>(null);
-  
+
   useEffect(() => {
-    // En una implementación real, conectaríamos a un servidor WebSocket
-    // Por ahora, simulamos con un timeout
-    
-    console.log('Conectando a WebSocket...');
-    
-    // Simulamos retraso de conexión
-    const connectionTimeout = setTimeout(() => {
-      console.log('WebSocket conectado');
-      setConnected(true);
+    // Only connect on the client side
+    if (typeof window === 'undefined') return;
+
+    // Create socket connection
+    const socketInstance = io();
+    setSocket(socketInstance);
+
+    // Set up event listeners
+    socketInstance.on('connect', () => {
+      console.log('Connected to WebSocket server');
+      setIsConnected(true);
+    });
+
+    socketInstance.on('disconnect', () => {
+      console.log('Disconnected from WebSocket server');
+      setIsConnected(false);
+    });
+
+    socketInstance.on('new_message', (data) => {
+      console.log('New message received via WebSocket:', data);
       
-      // Simulamos recibir mensajes periódicamente
-      // En una implementación real, esto sería manejado por eventos del WebSocket
-      const messageInterval = setInterval(() => {
-        // Simulamos una probabilidad baja de recibir un mensaje
-        if (Math.random() < 0.1) {
-          const simulatedMessage: Message = {
-            id: `sim-${Date.now()}`,
-            phoneNumber: '573002839317', // Número de teléfono de ejemplo
-            message: 'Este es un mensaje simulado recibido a través de WebSocket',
-            timestamp: new Date().toISOString(),
-            direction: 'incoming',
-          };
-          
-          console.log('Mensaje recibido vía WebSocket:', simulatedMessage);
-          setLastMessage(simulatedMessage);
-        }
-      }, 10000); // Verificar cada 10 segundos
-      
-      return () => {
-        clearInterval(messageInterval);
-        console.log('WebSocket desconectado');
+      // Convert the database message to our Message type
+      const newMessage: Message = {
+        id: data.message_wamid || data.id,
+        phoneNumber: data.display_phone || '',
+        message: data.text_body || '',
+        timestamp: new Date(data.timestamp_unix * 1000).toISOString(),
+        direction: data.direction === 'outbound' ? 'outgoing' : 'incoming',
       };
-    }, 1500);
-    
+      
+      setLastMessage(newMessage);
+    });
+
+    // Clean up on unmount
     return () => {
-      clearTimeout(connectionTimeout);
+      socketInstance.disconnect();
     };
   }, []);
-  
+
   return (
-    <WebSocketContext.Provider value={{ connected, lastMessage }}>
+    <WebSocketContext.Provider value={{ socket, isConnected, lastMessage }}>
       {children}
     </WebSocketContext.Provider>
   );
-}
+};
