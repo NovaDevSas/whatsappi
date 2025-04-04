@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef, useCallback } from 'react';
 import { Conversation, Message } from '@/types';
 import { useWebSocket } from './WebSocketContext';
 
@@ -30,11 +30,10 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const { lastMessage } = useWebSocket();
-  const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Fetch conversations from API
-  const refreshConversations = async () => {
+  const { isConnected, lastMessage } = useWebSocket();
+  
+  // Memoized refresh functions to prevent unnecessary re-renders
+  const refreshConversations = useCallback(async () => {
     try {
       const response = await fetch('/api/conversations');
       const data = await response.json();
@@ -44,10 +43,10 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     } catch (error) {
       console.error('Error fetching conversations:', error);
     }
-  };
+  }, []);
 
   // Fetch messages for active conversation
-  const refreshMessages = async () => {
+  const refreshMessages = useCallback(async () => {
     if (!activeConversation) return;
     
     try {
@@ -59,10 +58,10 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     } catch (error) {
       console.error('Error fetching messages:', error);
     }
-  };
+  }, [activeConversation]);
 
   // Send a message
-  const sendMessage = async (phoneNumber: string, message: string): Promise<boolean> => {
+  const sendMessage = useCallback(async (phoneNumber: string, message: string): Promise<boolean> => {
     try {
       const response = await fetch('/api/send-message', {
         method: 'POST',
@@ -76,49 +75,27 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         throw new Error('Failed to send message');
       }
       
-      // Refresh messages after sending
-      await refreshMessages();
-      await refreshConversations();
+      // No need to refresh as WebSocket will handle it
       return true;
     } catch (error) {
       console.error('Error sending message:', error);
       return false;
     }
-  };
+  }, []);
 
   // Initial load of conversations
   useEffect(() => {
     refreshConversations();
-  }, []);
+  }, [refreshConversations]);
 
-  // Set up auto-refresh when active conversation changes
+  // Load messages when active conversation changes
   useEffect(() => {
-    // Clear any existing interval
-    if (refreshIntervalRef.current) {
-      clearInterval(refreshIntervalRef.current);
-      refreshIntervalRef.current = null;
-    }
-
     if (activeConversation) {
-      // Initial refresh
       refreshMessages();
-      
-      // Set up auto-refresh every 10 seconds
-      refreshIntervalRef.current = setInterval(() => {
-        refreshMessages();
-      }, 10000); // 10 seconds
     } else {
       setMessages([]);
     }
-
-    // Cleanup function to clear interval when component unmounts or conversation changes
-    return () => {
-      if (refreshIntervalRef.current) {
-        clearInterval(refreshIntervalRef.current);
-        refreshIntervalRef.current = null;
-      }
-    };
-  }, [activeConversation]);
+  }, [activeConversation, refreshMessages]);
 
   // Handle new messages from WebSocket
   useEffect(() => {
@@ -126,12 +103,33 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     
     // Update messages if the new message belongs to the active conversation
     if (activeConversation && lastMessage.phoneNumber === activeConversation.phoneNumber) {
-      setMessages(prevMessages => [...prevMessages, lastMessage]);
+      // Check if message already exists to avoid duplicates
+      setMessages(prevMessages => {
+        const messageExists = prevMessages.some(msg => msg.id === lastMessage.id);
+        if (messageExists) {
+          return prevMessages;
+        }
+        return [...prevMessages, lastMessage];
+      });
     }
     
-    // Refresh conversations to update the last message preview
-    refreshConversations();
-  }, [lastMessage, activeConversation]);
+    // Update conversations list to reflect the new message
+    // But do it with a small delay to avoid too many refreshes
+    const debounceTimeout = setTimeout(() => {
+      refreshConversations();
+    }, 500);
+    
+    return () => clearTimeout(debounceTimeout);
+  }, [lastMessage, activeConversation, refreshConversations]);
+
+  // Log WebSocket connection status changes
+  useEffect(() => {
+    if (isConnected) {
+      console.log('WebSocket connected - real-time updates active');
+    } else {
+      console.log('WebSocket disconnected - manual refresh may be needed');
+    }
+  }, [isConnected]);
 
   return (
     <ConversationContext.Provider
