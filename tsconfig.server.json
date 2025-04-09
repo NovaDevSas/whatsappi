@@ -4,7 +4,10 @@
     "module": "commonjs",
     "outDir": "dist",
     "noEmit": false,
-    "target": "es2017"
+    "target": "es2017",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
   },
   "include": ["server.ts", "src/server"]
 }
