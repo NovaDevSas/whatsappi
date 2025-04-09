@@ -5,7 +5,7 @@
   "scripts": {
   "dev": "ts-node --project tsconfig.server.json server.ts",
   "build": "next build",
-  "start": "NODE_ENV=production ts-node --project tsconfig.server.json server.ts"
+  "start": "NODE_ENV=production node -r ts-node/register --project tsconfig.server.json server.ts"
 },
   "dependencies": {
     "framer-motion": "^12.6.3",
