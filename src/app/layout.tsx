@@ -9,6 +9,7 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'WhatsApp API Manager',
   description: 'A modern interface for WhatsApp API interactions',
+  viewport: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0',
 };
 
 export default function RootLayout({
@@ -18,7 +19,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="h-full bg-gray-50">
-      <body className={`${inter.className} h-full`}>
+      <body className={`${inter.className} h-full overflow-x-hidden`}>
         <WebSocketProvider>
           <ConversationProvider>
             <div className="min-h-full flex flex-col">

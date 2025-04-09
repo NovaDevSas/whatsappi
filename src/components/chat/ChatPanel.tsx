@@ -4,7 +4,7 @@ import { useWebSocket } from '@/contexts/WebSocketContext';
 
 export default function ChatPanel() {
   const { activeConversation, messages, sendMessage, refreshMessages } = useConversations();
-  const { isConnected, lastMessage, notificationsEnabled, toggleNotifications } = useWebSocket();
+  const { isConnected, notificationsEnabled, toggleNotifications } = useWebSocket();
   const [newMessage, setNewMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);

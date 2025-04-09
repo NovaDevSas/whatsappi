@@ -14,6 +14,7 @@
 body {
   background-color: var(--background-light);
   color: var(--text-dark);
+  @apply overflow-x-hidden;
 }
 
 /* Update all rounded-xl references to rounded-lg */
@@ -111,4 +112,43 @@ input, textarea {
 
 input:focus, textarea:focus {
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+
+/* Mobile optimizations */
+@media (max-width: 640px) {
+  /* Adjust padding for mobile */
+  .p-24 {
+    padding: 1rem !important;
+  }
+  
+  /* Ensure buttons are large enough for touch */
+  button, 
+  [role="button"],
+  a.button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Improve form inputs on mobile */
+  input, 
+  textarea, 
+  select {
+    font-size: 16px !important; /* Prevents iOS zoom on focus */
+  }
+}
+
+/* Fix for iOS 100vh issue */
+@supports (-webkit-touch-callout: none) {
+  .h-screen {
+    height: -webkit-fill-available;
+  }
+  .min-h-screen {
+    min-height: -webkit-fill-available;
+  }
+}
+
+/* Improve touch scrolling */
+* {
+  -webkit-overflow-scrolling: touch;
 }

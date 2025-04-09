@@ -8,7 +8,6 @@ interface ContactInfoProps {
 }
 
 export default function ContactInfo({ conversation, onClose }: ContactInfoProps) {
-  const [showOptions, setShowOptions] = useState(false);
   
   if (!conversation) return null;
   
