@@ -16,6 +16,7 @@ export default function MessageForm({
   const [sending, setSending] = useState(false);
   const [status, setStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
+  // Remove unused error parameter
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -49,13 +50,11 @@ export default function MessageForm({
           message: result.error || 'Error al enviar el mensaje',
         });
       }
-    } catch (error) {
+    } catch {
       setStatus({
         type: 'error',
         message: 'Ocurrió un error al enviar el mensaje',
       });
-    } finally {
-      setSending(false);
     }
   };
 
