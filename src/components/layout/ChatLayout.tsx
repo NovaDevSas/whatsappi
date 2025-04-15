@@ -98,7 +98,7 @@ export default function ChatLayout() {
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* WebSocket Connection Status */}
         {!connected && (
-          <div className="bg-yellow-100 text-yellow-800 px-4 py-2 text-sm">
+          <div className="bg-purple-100 text-purple-800 px-4 py-2 text-sm">
             Connecting to server for real-time updates...
           </div>
         )}

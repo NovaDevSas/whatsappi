@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-  "dev": "ts-node --project tsconfig.server.json server.ts",
-  "build": "next build",
-  "start": "NODE_ENV=production node dist/server.js"
-},
+    "dev": "ts-node --project tsconfig.server.json server.ts",
+    "build": "next build",
+    "start": "NODE_ENV=production node dist/server.js"
+  },
   "dependencies": {
     "framer-motion": "^12.6.3",
     "next": "15.2.4",
@@ -30,6 +30,7 @@
     "eslint-config-next": "15.2.4",
     "postcss": "^8.5.3",
     "tailwindcss": "^3.4.3",
+    "ts-node": "^10.9.2",
     "typescript": "^5"
   }
 }

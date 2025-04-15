@@ -20,37 +20,13 @@ export default function LandingCard() {
   };
 
   useEffect(() => {
-    // Asegurarse de que el video se reproduzca automáticamente cuando esté listo
+    // Configuración básica del video
     if (videoRef.current) {
-      // Reducir aún más la velocidad de reproducción
-      videoRef.current.playbackRate = 0.25;
-      
-      // Aplicar técnicas avanzadas para reducir parpadeos y mejorar calidad HD
-      videoRef.current.style.transform = 'translate3d(0, -2%, 0) scale(1.05)';
-      videoRef.current.style.webkitTransform = 'translate3d(0, -2%, 0) scale(1.05)';
-      
-      // Mejorar la calidad y rendimiento del video con filtros HD
-      videoRef.current.style.filter = 'brightness(0.85) contrast(1.05) saturate(1.1)';
-      videoRef.current.style.transition = 'opacity 1s ease-in-out, filter 1.5s ease-in-out';
-      videoRef.current.style.opacity = '0';
-      
-      // Precargar el video completamente antes de reproducirlo
-      videoRef.current.load();
-      videoRef.current.preload = 'auto';
-      
-      // Esperar a que el video esté completamente cargado antes de mostrarlo
+      // Reproducir el video cuando esté listo
       videoRef.current.oncanplaythrough = () => {
-        // Reproducir el video
         videoRef.current?.play().catch(error => {
           console.error("Error reproduciendo el video:", error);
         });
-        
-        // Mostrar el video gradualmente para evitar parpadeos
-        setTimeout(() => {
-          if (videoRef.current) {
-            videoRef.current.style.opacity = '1';
-          }
-        }, 300);
       };
     }
   }, []);
@@ -64,35 +40,21 @@ export default function LandingCard() {
     >
       {/* Video de fondo */}
       <div className="absolute inset-0 z-0 overflow-hidden">
-        {/* Capa de textura para mejorar la percepción de calidad */}
-        <div className="absolute inset-0 bg-noise opacity-[0.03] mix-blend-overlay pointer-events-none z-10"></div>
-        
         <video 
           ref={videoRef}
           className="absolute min-w-full min-h-full object-cover"
-          style={{ 
-            willChange: 'transform',
-            backfaceVisibility: 'hidden',
-            WebkitBackfaceVisibility: 'hidden',
-            transformStyle: 'preserve-3d',
-            WebkitTransformStyle: 'preserve-3d',
-            opacity: 0, // Inicialmente oculto para evitar parpadeos
-            objectFit: 'cover',
-            imageRendering: 'high-quality'
-          }}
           autoPlay
           muted
           loop
           playsInline
           preload="auto"
-          poster="/video/poster-frame.jpg"
         >
           <source src="/video/NovaVideo.mp4" type="video/mp4" />
           Tu navegador no soporta videos HTML5.
         </video>
         
-        {/* Overlay para mejorar la legibilidad del contenido con gradiente mejorado */}
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-900/30 via-purple-800/25 to-purple-700/20 backdrop-blur-[1px]"></div>
+        {/* Overlay para mejorar la legibilidad del contenido */}
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-900/40 via-purple-800/30 to-purple-700/20 backdrop-blur-[2px]"></div>
       </div>
       
       {/* Contenido principal */}
@@ -129,9 +91,17 @@ export default function LandingCard() {
               <button
                 onClick={handleNavigation}
                 disabled={isLoading}
-                className="bg-purple-600 text-white font-medium py-3 px-8 rounded-full shadow-lg hover:shadow-purple-500/50 hover:bg-purple-500 transform hover:scale-105 transition-all duration-300 ease-in-out flex items-center text-sm relative overflow-hidden group"
+                className="bg-[#8A3FFC] hover:bg-[#9B51E0] text-white font-medium py-3 px-8 rounded-full shadow-xl hover:shadow-purple-500/50 transform hover:scale-105 transition-all duration-300 ease-in-out flex items-center text-sm relative overflow-hidden group"
               >
-                <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-purple-500/40 to-purple-700/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ease-in-out"></span>
+                {/* Efecto de brillo que se mueve */}
+                <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out"></span>
+                
+                {/* Efecto de borde brillante */}
+                <span className="absolute inset-0 rounded-full border border-white/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
+                
+                {/* Efecto de partículas en hover */}
+                <span className="absolute -inset-px bg-gradient-to-r from-purple-400 to-indigo-400 rounded-full blur-sm opacity-0 group-hover:opacity-70 transition-opacity duration-300 group-hover:animate-pulse"></span>
+                
                 {isLoading ? (
                   <>
                     <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -142,13 +112,17 @@ export default function LandingCard() {
                   </>
                 ) : (
                   <>
-                    <span className="relative z-10">Comienza tu exploración</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-2 relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                    </svg>
+                    <span className="relative z-10 font-semibold">Comienza tu exploración</span>
+                    <div className="relative z-10 ml-2 bg-white/20 rounded-full p-1 transform group-hover:translate-x-1 transition-transform">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                      </svg>
+                    </div>
                   </>
                 )}
-                <span className="absolute -bottom-1 left-1/2 w-0 h-0.5 bg-white transform -translate-x-1/2 group-hover:w-3/4 transition-all duration-300 ease-in-out"></span>
+                
+                {/* Línea inferior animada */}
+                <span className="absolute bottom-0 left-1/2 w-0 h-0.5 bg-white/80 transform -translate-x-1/2 group-hover:w-4/5 transition-all duration-300 ease-in-out"></span>
               </button>
             </div>
           </motion.div>
@@ -161,8 +135,12 @@ export default function LandingCard() {
             transition={{ delay: 0.5, duration: 0.8 }}
           >
             <div className="relative w-[300px] h-[300px] mx-auto transform -translate-y-8">
-              {/* Círculo luminoso */}
-              <div className="absolute inset-0 rounded-full border-2 border-purple-400/30"></div>
+              {/* Círculo luminoso con efecto de brillo - cambiado a blanco con mayor opacidad */}
+              <div className="absolute inset-0 rounded-full border-2 border-white/50 animate-pulse"></div>
+              <div className="absolute inset-0 rounded-full border border-white/40 animate-pulse" style={{ animationDelay: '0.5s' }}></div>
+              
+              {/* Círculo adicional para reforzar el efecto blanco */}
+              <div className="absolute inset-0 rounded-full border border-white/30" style={{ animationDelay: '0.8s' }}></div>
               
               {/* Elemento central */}
               <motion.div
@@ -176,10 +154,10 @@ export default function LandingCard() {
                   ease: "linear"
                 }}
               >
-                <div className="w-40 h-40 bg-gradient-to-br from-purple-500 to-purple-700 rounded-full shadow-lg shadow-purple-500/20 flex items-center justify-center">
+                <div className="w-40 h-40 bg-white rounded-full shadow-lg shadow-white/30 flex items-center justify-center border-2 border-white">
                   <div className="w-32 h-32 rounded-full bg-[#0a192f] flex items-center justify-center">
                     <Image 
-                      src="/images/logonova.webp" 
+                      src="/images/novalogo.webp" 
                       alt="Nova Dev Logo" 
                       width={80} 
                       height={80} 
@@ -202,15 +180,15 @@ export default function LandingCard() {
         >
           <div className="text-center">
             <p className="text-2xl font-bold text-white">80K+</p>
-            <p className="text-xs text-gray-400 uppercase tracking-wider">Optimización</p>
+            <p className="text-xs text-white uppercase tracking-wider">Optimización</p>
           </div>
           <div className="text-center">
             <p className="text-2xl font-bold text-white">87K+</p>
-            <p className="text-xs text-gray-400 uppercase tracking-wider">Gestión</p>
+            <p className="text-xs text-white uppercase tracking-wider">Gestión</p>
           </div>
           <div className="text-center">
             <p className="text-2xl font-bold text-white">80K+</p>
-            <p className="text-xs text-gray-400 uppercase tracking-wider">Contactos</p>
+            <p className="text-xs text-white uppercase tracking-wider">Contactos</p>
           </div>
         </motion.div>
         
@@ -221,8 +199,8 @@ export default function LandingCard() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.9, duration: 0.8 }}
         >
-          <div className="h-1 w-full bg-gray-800 rounded-full overflow-hidden">
-            <div className="h-full w-3/4 bg-gradient-to-r from-purple-500 to-purple-400"></div>
+          <div className="h-1 w-full bg-gray-800/50 rounded-full overflow-hidden">
+            <div className="h-full w-3/4 bg-gradient-to-r from-purple-500 to-purple-400 animate-pulse"></div>
           </div>
         </motion.div>
       </div>

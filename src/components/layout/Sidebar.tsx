@@ -16,10 +16,10 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
   ];
 
   return (
-    <div className="w-20 bg-purple-600 text-white flex flex-col items-center py-6 h-screen">
+    <div className="w-20 bg-purple-700 bg-gradient-to-b from-purple-800 to-purple-600 text-white flex flex-col items-center py-6 h-screen shadow-lg">
       {/* Logo */}
       <div className="mb-10">
-        <div className="h-10 w-10 rounded-full bg-white text-purple-600 flex items-center justify-center font-bold text-xl">
+        <div className="h-10 w-10 rounded-full bg-white text-purple-600 flex items-center justify-center font-bold text-xl shadow-md shadow-purple-900/20">
           N
         </div>
       </div>
@@ -32,7 +32,7 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
               onClick={() => onViewChange('dashboard')}
               className={`p-3 rounded-xl transition-colors ${
                 activeView === 'dashboard' 
-                  ? 'bg-white text-purple-600' 
+                  ? 'bg-white text-purple-600 shadow-md shadow-purple-900/20' 
                   : 'text-white hover:bg-purple-500'
               }`}
               title="Dashboard"
@@ -58,7 +58,7 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
               onClick={() => onViewChange('chat')}
               className={`p-3 rounded-xl transition-colors ${
                 activeView === 'chat' 
-                  ? 'bg-white text-purple-600' 
+                  ? 'bg-white text-purple-600 shadow-md shadow-purple-900/20' 
                   : 'text-white hover:bg-purple-500'
               }`}
               title="Messages"
