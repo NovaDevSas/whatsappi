@@ -70,7 +70,7 @@ export default function MessageForm({
             id="phoneNumber"
             value={phoneNumber}
             onChange={(e) => setPhoneNumber(e.target.value)}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 transition-all"
             placeholder="+1234567890"
           />
         </div>
@@ -85,24 +85,24 @@ export default function MessageForm({
           rows={3}
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+          className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 transition-all"
           placeholder="Type your message here..."
         />
       </div>
       
       {status && (
-        <div className={`rounded-md p-4 ${
+        <div className={`rounded-lg p-4 ${
           status.type === 'error' ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'
-        }`}>
+        } shadow-sm transition-all`}>
           {status.message}
         </div>
       )}
       
-      <div className="flex justify-end">
+      <div className="flex justify-end w-full">
         <button
           type="submit"
           disabled={sending}
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto h-12"
         >
           {sending ? (
             <>
@@ -110,9 +110,17 @@ export default function MessageForm({
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
-              Sending...
+              <span className="mr-1">Enviando...</span>
             </>
-          ) : 'Send Message'}
+          ) : (
+            <span className="flex items-center justify-center">
+              <span className="mr-1 sm:inline hidden">Enviar Mensaje</span>
+              <span className="sm:hidden inline">Enviar</span>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-1" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            </span>
+          )}
         </button>
       </div>
     </form>

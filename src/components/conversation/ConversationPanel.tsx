@@ -1,7 +1,12 @@
 import { useState } from 'react';
 import { useConversations } from '@/contexts/ConversationContext';
+import { Conversation } from '@/types';
 
-export default function ConversationPanel() {
+interface ConversationPanelProps {
+  onSelectConversation?: (conversation: Conversation) => void;
+}
+
+export default function ConversationPanel({ onSelectConversation }: ConversationPanelProps) {
   const { 
     conversations, 
     activeConversation: selectedConversation, 
@@ -17,19 +22,19 @@ export default function ConversationPanel() {
   });
 
   return (
-    // Mantenemos el ancho pero mejoramos el diseño general
-    <div className="w-96 border-r border-gray-200 bg-white overflow-y-auto">
-      <div className="p-5">
-        <h2 className="text-2xl font-semibold text-gray-800 mb-5">Conversations</h2>
+    // Panel de conversaciones con diseño mejorado y mejor manejo de espacio
+    <div className="w-full md:w-96 border-r border-gray-200 bg-white flex flex-col h-full">
+      <div className="p-4 sticky top-0 bg-white z-10 shadow-sm">
+        <h2 className="text-xl font-semibold text-gray-800 mb-3">Conversaciones</h2>
         
         {/* Search con diseño mejorado */}
-        <div className="relative mb-6">
+        <div className="relative mb-2">
           <input
             type="text"
-            placeholder="Search..."
+            placeholder="Buscar conversación..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 bg-gray-50 transition-all"
+            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 bg-gray-50 transition-all shadow-sm"
           />
           <svg
             className="absolute right-3 top-3.5 h-5 w-5 text-gray-400"
@@ -47,7 +52,7 @@ export default function ConversationPanel() {
       </div>
       
       {/* Lista de conversaciones con mejor espaciado y diseño minimalista */}
-      <div className="px-3">
+      <div className="flex-1 overflow-y-auto px-3">
         {isLoading ? (
           <div className="flex justify-center items-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
@@ -75,7 +80,13 @@ export default function ConversationPanel() {
               return (
                 <div
                   key={conversation.id}
-                  onClick={() => selectConversation(conversation)}
+                  onClick={() => {
+                    selectConversation(conversation);
+                    // Si se proporcionó la función onSelectConversation, la llamamos
+                    if (onSelectConversation) {
+                      onSelectConversation(conversation);
+                    }
+                  }}
                   className={`p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer ${
                     isSelected ? 'bg-purple-50' : ''
                   }`}
