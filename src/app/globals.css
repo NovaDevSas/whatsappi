@@ -105,6 +105,16 @@ header {
   transition: opacity 300ms, transform 300ms;
 }
 
+/* Mejorar la apariencia de los mensajes */
+.message-bubble {
+  transition: all 0.2s ease;
+}
+
+.message-bubble:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
 /* Input styles */
 input, textarea {
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
@@ -135,6 +145,125 @@ input:focus, textarea:focus {
   select {
     font-size: 16px !important; /* Prevents iOS zoom on focus */
   }
+  
+  /* Sidebar toggle button optimizations for mobile */
+  button[aria-label="Mostrar menú"],
+  button[aria-label="Ocultar menú"] {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+  
+  /* Ensure chat content is properly visible when sidebar is hidden */
+  .flex-1.flex.flex-col.overflow-hidden {
+    width: 100%;
+  }
+  
+  /* Sidebar toggle button improvements for mobile */
+  .sidebar-toggle {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+  }
+  
+  /* Ensure the sidebar toggle button is always visible and accessible */
+  .sidebar-toggle:active {
+    transform: scale(0.95);
+  }
+  
+  /* Mejorar la visibilidad del botón de retorno */
+  .back-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin: 0.5rem 0;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+  }
+  
+  /* Evitar que los mensajes se corten en móvil */
+  .message-container {
+    padding-bottom: 80px !important;
+  }
+  
+  /* Mejorar la experiencia de chat en móvil */
+  .message-bubble {
+    max-width: 85% !important;
+  }
+  
+  .back-button:active {
+    transform: scale(0.95);
+  }
+}
+
+/* Responsive chat layout improvements */
+@media (max-width: 768px) {
+  /* Mejorar transiciones entre vistas */
+  .block, .hidden {
+    transition: all 0.3s ease;
+  }
+  
+  /* Asegurar que los botones de navegación sean fáciles de tocar */
+  .back-button {
+    padding: 10px;
+    border-radius: 8px;
+  }
+  
+  /* Mejorar la experiencia de chat en móvil */
+  .message-container {
+    padding-bottom: 70px; /* Espacio para el input de mensaje */
+    position: relative;
+    height: 100%;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  /* Asegurar que el encabezado del chat permanezca visible */
+  .sticky-header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background-color: white;
+    border-bottom: 1px solid #e5e7eb;
+    width: 100%;
+  }
+  
+  /* Mejorar el botón de enviar en responsivo */
+  form button[type="submit"] {
+    min-width: 80px;
+    white-space: nowrap;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  /* Mantener el panel superior conectado visualmente con el chat */
+  .message-container > div:first-child {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: inherit;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  
+  /* Asegurar que el contenido del chat se desplaza correctamente */
+  .message-container > div:nth-child(2) {
+    flex: 1;
+    overflow-y: auto;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Optimizar el panel de contacto para móvil */
+  .contact-info-mobile {
+    animation: slideIn 0.3s ease;
+  }
+  
+  @keyframes slideIn {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+  }
 }
 
 /* Fix for iOS 100vh issue */
@@ -157,6 +286,27 @@ input:focus, textarea:focus {
   box-shadow: 0 0 15px rgba(139, 92, 246, 0.5);
 }
 
+/* Sidebar toggle animation */
+.sidebar-toggle-enter {
+  width: 0;
+  overflow: hidden;
+}
+
+.sidebar-toggle-enter-active {
+  width: 5rem;
+  transition: width 300ms ease-in-out;
+}
+
+.sidebar-toggle-exit {
+  width: 5rem;
+}
+
+.sidebar-toggle-exit-active {
+  width: 0;
+  overflow: hidden;
+  transition: width 300ms ease-in-out;
+}
+
 /* Add noise texture */
 .bg-noise {
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
@@ -172,4 +322,65 @@ input:focus, textarea:focus {
 .gradient-animate {
   background-size: 200% 200%;
   animation: gradientFlow 8s ease infinite;
+}
+
+/* Dashboard toggle animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-10px); }
+}
+
+.dashboard-visible {
+  animation: fadeIn 0.3s ease forwards;
+}
+
+.dashboard-hidden {
+  animation: fadeOut 0.3s ease forwards;
+}
+
+/* Mejoras para el botón de enviar en responsivo */
+.send-button {
+  min-width: 50px;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  height: 48px;
+}
+
+@media (max-width: 640px) {
+  .send-button {
+    width: 100%;
+    justify-content: center;
+    margin-top: 0.5rem;
+  }
+  
+  /* Mejorar el área de entrada de mensajes en móvil */
+  .message-input-container {
+    flex-direction: column;
+  }
+  
+  /* Asegurar que el área de chat tenga suficiente espacio para el input */
+  .message-container {
+    padding-bottom: 100px !important;
+  }
+  
+  /* Hacer que el botón de enviar sea más fácil de tocar */
+  form button[type="submit"] {
+    min-height: 48px;
+    border-radius: 8px;
+    font-size: 16px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  
+  /* Mejorar la apariencia del input de mensaje */
+  input[type="text"] {
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 16px;
+    height: 48px;
+  }
 }
