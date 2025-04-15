@@ -16,9 +16,9 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
   ];
 
   return (
-    <div className="w-20 bg-purple-700 bg-gradient-to-b from-purple-800 to-purple-600 text-white flex flex-col items-center py-6 h-screen shadow-lg">
-      {/* Logo */}
-      <div className="mb-10">
+    <div className="w-20 bg-purple-700 bg-gradient-to-b from-purple-800 to-purple-600 text-white flex flex-col items-center py-6 h-screen shadow-lg transition-all duration-300 ease-in-out z-10">
+      {/* Logo - Eliminado para evitar duplicación con el botón flotante */}
+      <div className="mb-10 invisible">
         <div className="h-10 w-10 rounded-full bg-white text-purple-600 flex items-center justify-center font-bold text-xl shadow-md shadow-purple-900/20">
           N
         </div>
