@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { useConversations } from '@/contexts/ConversationContext';
 
 // Componentes auxiliares para el Dashboard
 const StatCard = ({ title, value, icon, color, subtitle }) => (
@@ -115,6 +116,7 @@ const HourlyActivity = ({ data }) => {
 
 export default function Dashboard() {
   const router = useRouter();
+  const { setActiveConversation } = useConversations();
   const [stats, setStats] = useState({
     activeChats: 0,
     totalMessages: 0,
@@ -128,13 +130,20 @@ export default function Dashboard() {
   const [hourlyActivity, setHourlyActivity] = useState({});
   const [messageTypes, setMessageTypes] = useState({});
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
+  const refreshIntervalRef = useRef(null);
   // Se eliminó el estado de filtro: const [filter, setFilter] = useState('all');
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        setLoading(true);
+  // Función para actualizar los datos del dashboard
+  const refreshDashboardData = useCallback(async (showLoading = true) => {
+    if (showLoading) {
+      setLoading(true);
+    } else {
+      setRefreshing(true);
+    }
+    
+    try {
         
         // Fetch conversations for recent chats and stats
         const conversationsResponse = await fetch('/api/conversations');
@@ -207,21 +216,31 @@ export default function Dashboard() {
           messagesLast24h: last24h
         });
         
-      } catch (err) {
-        console.error('Error fetching dashboard data:', err);
-        setError(err.message);
-      } finally {
         setLoading(false);
+        setRefreshing(false);
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+        setError(error.message);
+        setLoading(false);
+        setRefreshing(false);
+      }
+  }, []);
+  
+  // Efecto para cargar datos iniciales
+  useEffect(() => {
+    refreshDashboardData();
+    
+    // Configurar actualización automática cada 30 segundos
+    refreshIntervalRef.current = setInterval(() => {
+      refreshDashboardData(false); // No mostrar estado de carga completo para actualizaciones automáticas
+    }, 30000);
+    
+    return () => {
+      // Limpiar intervalo al desmontar
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
       }
     };
-    
-    fetchDashboardData();
-    
-    // Set up a refresh interval (every 2 minutes)
-    const intervalId = setInterval(fetchDashboardData, 2 * 60 * 1000);
-    
-    // Clean up interval on component unmount
-    return () => clearInterval(intervalId);
   }, []); // Se eliminó filter de las dependencias
 
   // Helper functions
@@ -300,12 +319,43 @@ export default function Dashboard() {
   };
   
   const handleChatSelect = (phoneNumber) => {
-    // Navigate to the chat view and select this conversation
-    router.push('/chat');
-    // You would need to implement a way to select this conversation in your chat component
-    // This could be through URL parameters, context, or state management
+    // Buscar la conversación correspondiente al número de teléfono
+    const selectedChat = recentChats.find(chat => chat.phoneNumber === phoneNumber);
+    
+    // Obtener las conversaciones para encontrar la conversación completa
+    fetch('/api/conversations')
+      .then(response => response.json())
+      .then(data => {
+        // Encontrar la conversación completa en los datos
+        const fullConversation = data.conversations?.find(
+          conv => conv.phoneNumber === phoneNumber
+        );
+        
+        if (fullConversation) {
+          // Primero establecer la conversación activa
+          setActiveConversation(fullConversation);
+          
+          // Luego navegar a la vista de chat con un pequeño retraso para asegurar que el contexto se actualice
+          setTimeout(() => {
+            router.push('/chat');
+          }, 100);
+        } else {
+          console.error('No se encontró la conversación completa');
+          router.push('/chat');
+        }
+      })
+      .catch(error => {
+        console.error('Error al obtener conversaciones:', error);
+        // Si hay un error, navegar de todos modos
+        router.push('/chat');
+      });
   };
 
+  // Función para manejar la actualización manual
+  const handleManualRefresh = () => {
+    refreshDashboardData(false);
+  };
+  
   if (loading) {
     return (
       <div className="p-6 flex-1 flex items-center justify-center">
@@ -326,77 +376,80 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="p-6 flex-1 overflow-y-auto">
-      <div className="mb-6 flex justify-between items-center">
+    <div className="p-4 md:p-6 flex-1 overflow-y-auto bg-gray-50">
+      {/* Header con botón de actualización */}
+      <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Panel de Control</h1>
-          <p className="text-gray-600">Gestión de conversaciones de WhatsApp</p>
+          <h1 className="text-xl md:text-2xl font-bold text-gray-800">Panel de Control</h1>
+          <p className="text-gray-600 text-sm md:text-base">Gestión de conversaciones de WhatsApp</p>
         </div>
-        {/* Se eliminó la sección de filtros (Todos, No leídos, Pendientes) */}
+        <button 
+          onClick={handleManualRefresh}
+          disabled={refreshing}
+          className="mt-2 sm:mt-0 flex items-center px-3 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors"
+        >
+          {refreshing ? (
+            <>
+              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-purple-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span className="text-sm">Actualizando...</span>
+            </>
+          ) : (
+            <>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <span className="text-sm">Actualizar</span>
+            </>
+          )}
+        </button>
       </div>
       
-      {/* Stats Cards - Primera fila */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      {/* Stats Grid - Responsivo para móviles */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
         <StatCard 
-          title="Chats Activos" 
+          title="Conversaciones Activas" 
           value={stats.activeChats.toString()} 
           icon={<MessageIcon />} 
-          color="bg-amber-100 text-amber-600" 
-          subtitle="Conversaciones totales"
+          color="bg-blue-100 text-blue-600"
         />
         <StatCard 
           title="Mensajes Totales" 
           value={stats.totalMessages.toString()} 
           icon={<SendIcon />} 
-          color="bg-green-100 text-green-600" 
-          subtitle="Histórico acumulado"
+          color="bg-purple-100 text-purple-600"
+          subtitle={`${stats.messagesLast24h} en las últimas 24h`}
         />
         <StatCard 
           title="Contactos" 
           value={stats.contacts.toString()} 
           icon={<UserIcon />} 
-          color="bg-blue-100 text-blue-600" 
-          subtitle="Clientes registrados"
+          color="bg-green-100 text-green-600"
         />
-      </div>
-      
-      {/* Stats Cards - Segunda fila */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <StatCard 
           title="Respuestas Pendientes" 
           value={stats.pendingResponses.toString()} 
           icon={<InboxIcon />} 
-          color="bg-red-100 text-red-600" 
-          subtitle="Requieren atención"
-        />
-        <StatCard 
-          title="Tiempo de Respuesta" 
-          value={stats.avgResponseTime} 
-          icon={<ClockIcon />} 
-          color="bg-purple-100 text-purple-600" 
-          subtitle="Promedio"
-        />
-        <StatCard 
-          title="Mensajes (24h)" 
-          value={stats.messagesLast24h.toString()} 
-          icon={<MessageIcon />} 
-          color="bg-indigo-100 text-indigo-600" 
-          subtitle="Actividad reciente"
+          color="bg-yellow-100 text-yellow-600"
+          subtitle={`Tiempo medio de respuesta: ${stats.avgResponseTime}`}
         />
       </div>
       
-      {/* Main Dashboard Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+      {/* Main Dashboard Content - Diseño responsivo mejorado */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-8">
         {/* Recent Chats - Expanded to 2 columns */}
         <div className="lg:col-span-2 bg-white rounded-lg shadow overflow-hidden">
-          <div className="p-4 border-b border-gray-200">
-            <h2 className="text-lg font-medium">Conversaciones Recientes</h2>
+          <div className="p-4 md:p-6 border-b border-gray-200 flex justify-between items-center">
+            <h2 className="text-lg font-semibold text-gray-800">Conversaciones Recientes</h2>
+            <span className="text-xs text-gray-500">{recentChats.length} conversaciones</span>
           </div>
           <div className="divide-y divide-gray-100 max-h-[500px] overflow-y-auto">
             {recentChats.length > 0 ? (
-              recentChats.map((chat, index) => (
+              recentChats.map((chat) => (
                 <RecentChat 
-                  key={index}
+                  key={chat.phoneNumber}
                   chat={chat}
                   onSelect={handleChatSelect}
                 />
@@ -410,7 +463,12 @@ export default function Dashboard() {
           <div className="p-4 border-t border-gray-200 bg-gray-50">
             <button 
               className="text-sm text-purple-600 hover:text-purple-800 font-medium"
-              onClick={() => router.push('/chat')}
+              onClick={() => {
+                // Asegurar que se navegue a la vista de chat correctamente
+                setTimeout(() => {
+                  router.push('/chat');
+                }, 100);
+              }}
             >
               Ver todas las conversaciones →
             </button>
@@ -419,14 +477,23 @@ export default function Dashboard() {
         
         {/* Activity Stats */}
         <div className="bg-white rounded-lg shadow">
-          <div className="p-4 border-b border-gray-200">
-            <h2 className="text-lg font-medium">Actividad Reciente</h2>
+          <div className="p-4 md:p-6 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-800">Actividad Reciente</h2>
           </div>
-          <div className="p-4">
+          <div className="p-4 md:p-6">
             <h3 className="text-sm font-medium text-gray-500 mb-2">Mensajes por hora</h3>
-            <HourlyActivity data={hourlyActivity} />
+            {Object.keys(hourlyActivity).length > 0 ? (
+              <HourlyActivity data={hourlyActivity} />
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8 text-gray-500">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-gray-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                <p>No hay datos disponibles</p>
+              </div>
+            )}
           </div>
-          <div className="p-4 border-t border-gray-200">
+          <div className="p-4 md:p-6 border-t border-gray-200">
             <h3 className="text-sm font-medium text-gray-500 mb-3">Tipos de Mensajes</h3>
             <div className="space-y-2">
               {Object.entries(messageTypes).map(([type, count]) => (
@@ -450,5 +517,5 @@ export default function Dashboard() {
       
       {/* Se eliminó la sección de Acciones Rápidas */}
     </div>
-  ); // This closing curly brace was missing
+  );
 }
