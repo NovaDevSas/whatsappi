@@ -85,7 +85,7 @@ export default function LandingCard() {
           loop
           playsInline
           preload="auto"
-          poster="/video/poster-frame.jpg"
+          poster="/images/admin.png"
         >
           <source src="/video/NovaVideo.mp4" type="video/mp4" />
           Tu navegador no soporta videos HTML5.
@@ -179,7 +179,7 @@ export default function LandingCard() {
                 <div className="w-40 h-40 bg-gradient-to-br from-purple-500 to-purple-700 rounded-full shadow-lg shadow-purple-500/20 flex items-center justify-center">
                   <div className="w-32 h-32 rounded-full bg-[#0a192f] flex items-center justify-center">
                     <Image 
-                      src="/images/logonova.webp" 
+                      src="/images/admin.png" 
                       alt="Nova Dev Logo" 
                       width={80} 
                       height={80} 
