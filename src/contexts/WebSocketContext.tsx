@@ -10,6 +10,9 @@ interface WebSocketContextType {
   lastMessage: Message | null;
   notificationsEnabled: boolean;
   toggleNotifications: () => void;
+  connectionStatus?: 'connected' | 'disconnected' | 'connecting';
+  reconnect: () => void;
+  lastActivity: Date | null;
 }
 
 const WebSocketContext = createContext<WebSocketContextType>({
@@ -18,6 +21,9 @@ const WebSocketContext = createContext<WebSocketContextType>({
   lastMessage: null,
   notificationsEnabled: false,
   toggleNotifications: () => {},
+  connectionStatus: 'disconnected',
+  reconnect: () => {},
+  lastActivity: null,
 });
 
 export const useWebSocket = () => useContext(WebSocketContext);
@@ -28,6 +34,37 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [lastMessage, setLastMessage] = useState<Message | null>(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | null>(null);
+  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'connecting'>('disconnected');
+  const [lastActivity, setLastActivity] = useState<Date | null>(null);
+  
+  // Function to reconnect the socket
+  const reconnect = useCallback(() => {
+    if (socket) {
+      console.log('Attempting to reconnect WebSocket...');
+      setConnectionStatus('connecting');
+      
+      // Close existing connection
+      socket.close();
+      
+      // Create new connection
+      const newSocket = io();
+      setSocket(newSocket);
+      
+      // Set up event listeners for the new socket
+      newSocket.on('connect', () => {
+        console.log('Reconnected to WebSocket server');
+        setIsConnected(true);
+        setConnectionStatus('connected');
+        setLastActivity(new Date());
+      });
+      
+      newSocket.on('disconnect', () => {
+        console.log('Disconnected from WebSocket server');
+        setIsConnected(false);
+        setConnectionStatus('disconnected');
+      });
+    }
+  }, [socket]);
 
   // Check if notifications are supported and get permission status
   useEffect(() => {
@@ -146,6 +183,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     socketInstance.on('new_message', (data) => {
       console.log('New message received via WebSocket:', data);
+      setLastActivity(new Date());
       
       // Convert the database message to our Message type
       const newMessage: Message = {
@@ -161,21 +199,77 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       // Show notification for the new message
       showNotification(newMessage);
     });
+    
+    // Handle pong responses to track activity
+    socketInstance.on('pong', () => {
+      setLastActivity(new Date());
+    });
 
     // Clean up on unmount
     return () => {
       socketInstance.disconnect();
     };
   }, [showNotification]);
+  
+  // Auto-reconnect on network status change
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    const handleOnline = () => {
+      console.log('Network is online, attempting to reconnect');
+      if (!isConnected) {
+        reconnect();
+      }
+    };
+    
+    window.addEventListener('online', handleOnline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+    };
+  }, [isConnected, reconnect]);
+
+  // Ping server periodically to keep connection alive
+  useEffect(() => {
+    if (!socket || !isConnected) return;
+    
+    const pingInterval = setInterval(() => {
+      socket.emit('ping', { timestamp: new Date().toISOString() });
+    }, 30000); // Every 30 seconds
+    
+    return () => clearInterval(pingInterval);
+  }, [socket, isConnected]);
+  
+  // Monitor for inactivity and reconnect if needed
+  useEffect(() => {
+    if (!socket) return;
+    
+    const checkActivity = setInterval(() => {
+      if (lastActivity) {
+        const inactiveTime = Date.now() - lastActivity.getTime();
+        if (inactiveTime > 120000 && !isConnected) { // 2 minutes
+          console.log('Connection inactive for too long, attempting reconnect');
+          reconnect();
+        }
+      }
+    }, 60000); // Check every minute
+    
+    return () => clearInterval(checkActivity);
+  }, [socket, lastActivity, isConnected, reconnect]);
 
   return (
-    <WebSocketContext.Provider value={{ 
-      socket, 
-      isConnected, 
-      lastMessage, 
-      notificationsEnabled,
-      toggleNotifications
-    }}>
+    <WebSocketContext.Provider
+      value={{
+        socket,
+        isConnected,
+        lastMessage,
+        notificationsEnabled,
+        toggleNotifications,
+        connectionStatus,
+        reconnect,
+        lastActivity,
+      }}
+    >
       {children}
     </WebSocketContext.Provider>
   );

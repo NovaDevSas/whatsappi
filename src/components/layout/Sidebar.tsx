@@ -1,13 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 
 interface SidebarProps {
   activeView: 'chat' | 'dashboard';
   onViewChange: (view: 'chat' | 'dashboard') => void;
+  isVisible: boolean;
+  toggleSidebar: () => void;
 }
 
-export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
+export default function Sidebar({ activeView, onViewChange, isVisible, toggleSidebar }: SidebarProps) {
   const menuItems = [
     { id: 'dashboard', icon: 'M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z', label: 'Dashboard' },
     { id: 'messages', icon: 'M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z', label: 'Messages' },
@@ -16,74 +18,43 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
   ];
 
   return (
-    <div className="w-20 bg-purple-600 text-white flex flex-col items-center py-6 h-screen">
-      {/* Logo */}
-      <div className="mb-10">
-        <div className="h-10 w-10 rounded-full bg-white text-purple-600 flex items-center justify-center font-bold text-xl">
+    <>
+      {/* Floating toggle button - always visible */}
+      <button 
+        onClick={toggleSidebar}
+        className={`fixed top-4 left-4 z-50 rounded-full bg-white text-purple-600 flex items-center justify-center font-bold shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out ${
+          isVisible ? 'toggle-btn-expanded' : 'toggle-btn-collapsed hover:scale-110'
+        }`}
+        title={isVisible ? "Ocultar menú" : "Mostrar menú"}
+        aria-label={isVisible ? "Ocultar menú" : "Mostrar menú"}
+        aria-expanded={isVisible}
+      >
+        <span className={`transform transition-all duration-300 ${!isVisible && 'scale-90'}`}>
           N
-        </div>
-      </div>
+        </span>
+      </button>
       
-      {/* Navigation */}
-      <nav className="flex-1 w-full">
-        <ul className="space-y-6">
-          <li className="flex justify-center">
-            <button
-              onClick={() => onViewChange('dashboard')}
-              className={`p-3 rounded-xl transition-colors ${
-                activeView === 'dashboard' 
-                  ? 'bg-white text-purple-600' 
-                  : 'text-white hover:bg-purple-500'
-              }`}
-              title="Dashboard"
-            >
-              <svg 
-                xmlns="http://www.w3.org/2000/svg" 
-                className="h-6 w-6" 
-                fill="none" 
-                viewBox="0 0 24 24" 
-                stroke="currentColor"
-              >
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth={2} 
-                  d={menuItems[0].icon} 
-                />
-              </svg>
-            </button>
-          </li>
-          <li className="flex justify-center">
-            <button
-              onClick={() => onViewChange('chat')}
-              className={`p-3 rounded-xl transition-colors ${
-                activeView === 'chat' 
-                  ? 'bg-white text-purple-600' 
-                  : 'text-white hover:bg-purple-500'
-              }`}
-              title="Messages"
-            >
-              <svg 
-                xmlns="http://www.w3.org/2000/svg" 
-                className="h-6 w-6" 
-                fill="none" 
-                viewBox="0 0 24 24" 
-                stroke="currentColor"
-              >
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth={2} 
-                  d={menuItems[1].icon} 
-                />
-              </svg>
-            </button>
-          </li>
-          {menuItems.slice(2).map((item) => (
-            <li key={item.id} className="flex justify-center">
+      {/* Sidebar - conditionally rendered with animation classes */}
+      <div 
+        className={`fixed top-0 left-0 w-20 bg-purple-600 text-white flex flex-col items-center py-6 h-screen z-40 transform transition-all duration-300 ease-in-out ${
+          isVisible ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0'
+        }`}
+      >
+        {/* Spacer for logo area */}
+        <div className="mb-10 h-10"></div>
+        
+        {/* Navigation */}
+        <nav className="flex-1 w-full">
+          <ul className="space-y-6">
+            <li className="flex justify-center">
               <button
-                className="p-3 text-white hover:bg-purple-500 rounded-xl transition-colors"
-                title={item.label}
+                onClick={() => onViewChange('dashboard')}
+                className={`p-3 rounded-xl transition-colors ${
+                  activeView === 'dashboard' 
+                    ? 'bg-white text-purple-600' 
+                    : 'text-white hover:bg-purple-500'
+                }`}
+                title="Dashboard"
               >
                 <svg 
                   xmlns="http://www.w3.org/2000/svg" 
@@ -96,35 +67,84 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
                     strokeLinecap="round" 
                     strokeLinejoin="round" 
                     strokeWidth={2} 
-                    d={item.icon} 
+                    d={menuItems[0].icon} 
                   />
                 </svg>
               </button>
             </li>
-          ))}
-        </ul>
-      </nav>
-      
-      {/* Logout */}
-      <button 
-        className="p-3 text-white hover:bg-purple-500 rounded-xl transition-colors mt-6"
-        title="Logout"
-      >
-        <svg 
-          xmlns="http://www.w3.org/2000/svg" 
-          className="h-6 w-6" 
-          fill="none" 
-          viewBox="0 0 24 24" 
-          stroke="currentColor"
+            <li className="flex justify-center">
+              <button
+                onClick={() => onViewChange('chat')}
+                className={`p-3 rounded-xl transition-colors ${
+                  activeView === 'chat' 
+                    ? 'bg-white text-purple-600' 
+                    : 'text-white hover:bg-purple-500'
+                }`}
+                title="Messages"
+              >
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  className="h-6 w-6" 
+                  fill="none" 
+                  viewBox="0 0 24 24" 
+                  stroke="currentColor"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={2} 
+                    d={menuItems[1].icon} 
+                  />
+                </svg>
+              </button>
+            </li>
+            {menuItems.slice(2).map((item) => (
+              <li key={item.id} className="flex justify-center">
+                <button
+                  className="p-3 text-white hover:bg-purple-500 rounded-xl transition-colors"
+                  title={item.label}
+                >
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    className="h-6 w-6" 
+                    fill="none" 
+                    viewBox="0 0 24 24" 
+                    stroke="currentColor"
+                  >
+                    <path 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      strokeWidth={2} 
+                      d={item.icon} 
+                    />
+                  </svg>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </nav>
+        
+        {/* Logout */}
+        <button 
+          className="p-3 text-white hover:bg-purple-500 rounded-xl transition-colors mt-6"
+          title="Logout"
         >
-          <path 
-            strokeLinecap="round" 
-            strokeLinejoin="round" 
-            strokeWidth={2} 
-            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" 
-          />
-        </svg>
-      </button>
-    </div>
+          <svg 
+            xmlns="http://www.w3.org/2000/svg" 
+            className="h-6 w-6" 
+            fill="none" 
+            viewBox="0 0 24 24" 
+            stroke="currentColor"
+          >
+            <path 
+              strokeLinecap="round" 
+              strokeLinejoin="round" 
+              strokeWidth={2} 
+              d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" 
+            />
+          </svg>
+        </button>
+      </div>
+    </>
   );
 }

@@ -58,6 +58,7 @@ const RecentChat = ({ name, email, time, status }) => (
 
 export default function ChatLayout() {
   const [activeView, setActiveView] = useState<'chat' | 'dashboard'>('dashboard');
+  const [sidebarVisible, setSidebarVisible] = useState(true);
   const { connected, lastMessage } = useWebSocket();
   const { selectedConversation, selectConversation, refreshMessages } = useConversations();
   
@@ -89,13 +90,27 @@ export default function ChatLayout() {
     }
   }, [lastMessage, selectedConversation, memoizedRefreshMessages]);
 
+  // Toggle sidebar visibility
+  const toggleSidebar = () => {
+    setSidebarVisible(prev => !prev);
+  };
+
   return (
     <div className="flex h-screen bg-purple-50">
-      {/* Sidebar */}
-      <Sidebar activeView={activeView} onViewChange={setActiveView} />
+      {/* Sidebar with toggle functionality */}
+      <Sidebar 
+        activeView={activeView} 
+        onViewChange={setActiveView}
+        isVisible={sidebarVisible}
+        toggleSidebar={toggleSidebar}
+      />
       
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      {/* Main Content - adjusts based on sidebar visibility */}
+      <div 
+        className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 ease-in-out ${
+          sidebarVisible ? 'ml-20' : 'ml-0'
+        }`}
+      >
         {/* WebSocket Connection Status */}
         {!connected && (
           <div className="bg-yellow-100 text-yellow-800 px-4 py-2 text-sm">
