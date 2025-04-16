@@ -250,3 +250,115 @@ input:focus, textarea:focus {
     font-size: 0.875rem !important;
   }
 }
+
+/* Add these styles at the end of your globals.css file */
+
+/* Mobile chat transitions */
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.3s forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+/* Chat message container */
+.chat-messages {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  overscroll-behavior-y: contain;
+}
+
+/* Improved touch targets for mobile */
+@media (max-width: 768px) {
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
+  
+  button, 
+  .clickable {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  input, 
+  textarea {
+    font-size: 16px; /* Prevents iOS zoom on focus */
+  }
+  
+  /* Ensure proper spacing in mobile chat */
+  .chat-messages {
+    padding: 0.75rem;
+  }
+}
+
+/* Fix for sticky headers and footers */
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: white;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.sticky-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  background-color: white;
+  border-top: 1px solid #e5e7eb;
+}
+
+/* Prevent layout shifts */
+.flex-col {
+  min-height: 0;
+}
+
+/* Ensure proper height distribution */
+.h-full {
+  height: 100%;
+}
+
+.overflow-hidden {
+  overflow: hidden;
+}
+
+/* Message text formatting */
+.whitespace-pre-wrap {
+  white-space: pre-wrap;
+}
+
+.break-words {
+  word-break: break-word;
+}
+
+/* Prevent text from being cut off */
+.message-bubble p {
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  hyphens: auto;
+}
+
+/* Back button hover effect */
+.back-btn {
+  transition: all 0.2s ease;
+}
+
+.back-btn:hover {
+  background-color: rgba(124, 58, 237, 0.1);
+  transform: translateX(-2px);
+}
+
+.back-btn:active {
+  transform: translateX(-4px);
+}

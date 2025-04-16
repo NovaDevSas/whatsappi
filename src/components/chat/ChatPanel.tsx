@@ -1,8 +1,14 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { useConversations } from '@/contexts/ConversationContext';
 import { useWebSocket } from '@/contexts/WebSocketContext';
+import ContactInfo from './ContactInfo';
 
-export default function ChatPanel() {
+interface ChatPanelProps {
+  isMobile?: boolean;
+  onBackClick?: () => void;
+}
+
+export default function ChatPanel({ isMobile = false, onBackClick }: ChatPanelProps) {
   const { activeConversation, messages, sendMessage, refreshMessages } = useConversations();
   const { isConnected, notificationsEnabled, toggleNotifications } = useWebSocket();
   const [newMessage, setNewMessage] = useState('');
@@ -65,238 +71,240 @@ export default function ChatPanel() {
   // If no conversation is selected, show a placeholder
   if (!activeConversation) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center bg-gray-50 p-8">
-        <div className="text-center">
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No conversation selected</h3>
-          <p className="text-gray-500">Select a conversation from the list or start a new one</p>
+      <div className="flex-1 flex flex-col items-center justify-center bg-gray-50 p-4 md:p-8 animate-fade-in">
+        <div className="text-center max-w-md">
+          <div className="mb-6 bg-purple-100 text-purple-600 rounded-full p-4 inline-block">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+            </svg>
+          </div>
+          <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-2">No conversation selected</h2>
+          <p className="text-gray-600">Select a conversation from the list to start chatting</p>
         </div>
       </div>
     );
   }
 
-  // Add this new function to test notifications
-  const testNotification = () => {
-    console.log('Testing notification...');
-    
-    if (!('Notification' in window)) {
-      alert('This browser does not support notifications');
-      return;
-    }
-    
-    console.log('Current notification permission:', Notification.permission);
-    
-    if (Notification.permission === 'granted') {
-      showTestNotification();
-    } else if (Notification.permission !== 'denied') {
-      Notification.requestPermission().then(permission => {
-        console.log('Permission response:', permission);
-        if (permission === 'granted') {
-          showTestNotification();
-        } else {
-          alert('Notification permission was not granted');
-        }
-      });
-    } else {
-      alert('Notification permission denied. Please enable notifications in your browser settings.');
-    }
-  };
-  
-  // Separate function to show the test notification
-  const showTestNotification = () => {
-    try {
-      const notification = new Notification('Test Notification', {
-        body: 'This is a test notification from WhatsApp',
-        icon: '/favicon.ico'
-      });
-      
-      // Auto close after 5 seconds
-      setTimeout(() => notification.close(), 5000);
-      
-      // Handle click
-      notification.onclick = () => {
-        window.focus();
-        notification.close();
-      };
-    } catch (error) {
-      console.error('Error creating notification:', error);
-      alert('Error creating notification: ' + error);
-    }
-  };
-
   return (
-    <div className="flex-1 flex">
-      <div className={`flex-1 flex flex-col ${showContactInfo ? 'hidden md:flex' : 'flex'}`}>
-        {/* Chat header */}
-        <div className="bg-white border-b border-gray-200 px-4 py-3 flex justify-between items-center">
-          <div className="flex items-center">
-            <div 
-              className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-medium mr-3 cursor-pointer"
-              onClick={() => setShowContactInfo(true)}
+    <div className="flex flex-col h-full w-full bg-gray-50 overflow-hidden">
+      {/* Sticky header */}
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
+        <div className="flex items-center p-3 md:p-4">
+          {isMobile && (
+            <button 
+              onClick={onBackClick}
+              className="mr-2 p-2 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 touch-manipulation"
+              aria-label="Back to conversations"
             >
-              {activeConversation.contact?.name?.[0]?.toUpperCase() || activeConversation.phoneNumber[0]}
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                className="h-5 w-5 text-gray-600" 
+                fill="none" 
+                viewBox="0 0 24 24" 
+                stroke="currentColor"
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={2} 
+                  d="M15 19l-7-7 7-7" 
+                />
+              </svg>
+            </button>
+          )}
+          
+          <div 
+            className="flex items-center flex-1 min-w-0 cursor-pointer"
+            onClick={() => setShowContactInfo(!showContactInfo)}
+          >
+            <div className="w-10 h-10 flex-shrink-0 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-medium mr-3 shadow-sm">
+              {(activeConversation.contact?.name || activeConversation.phoneNumber).charAt(0).toUpperCase()}
             </div>
-            <div>
-              <h2 className="font-medium text-gray-800">
+            <div className="min-w-0 flex-1">
+              <h2 className="font-medium text-gray-900 truncate">
                 {activeConversation.contact?.name || activeConversation.phoneNumber}
               </h2>
+              <div className="flex items-center">
+                <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-gray-300'} mr-2`}></span>
+                <span className="text-xs text-gray-500 truncate">
+                  {isConnected ? 'Connected' : 'Disconnected'}
+                </span>
+              </div>
             </div>
           </div>
+          
           <div className="flex items-center">
-            {isConnected ? (
-              <span className="text-xs text-green-500 flex items-center mr-3">
-                <span className="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
-                Connected
-              </span>
-            ) : (
-              <span className="text-xs text-red-500 flex items-center mr-3">
-                <span className="w-2 h-2 bg-red-500 rounded-full mr-1"></span>
-                Disconnected
-              </span>
-            )}
-            {lastRefresh && (
-              <span className="text-xs text-gray-500 mr-3">
-                Last updated: {lastRefresh.toLocaleTimeString()}
-              </span>
-            )}
-            {/* Test notification button */}
             <button 
-              onClick={testNotification}
-              className="p-2 rounded-full hover:bg-gray-100 text-gray-500 mr-2"
-              title="Test Notification"
+              onClick={handleRefreshMessages}
+              disabled={isLoadingMessages}
+              className="p-2 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 mr-1 touch-manipulation"
+              aria-label="Refresh messages"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-orange-500" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
-                <path d="M10 4a1 1 0 011 1v1a1 1 0 11-2 0V5a1 1 0 011-1z" />
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                className={`h-5 w-5 text-gray-600 ${isLoadingMessages ? 'animate-spin' : ''}`}
+                fill="none" 
+                viewBox="0 0 24 24" 
+                stroke="currentColor"
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={2} 
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" 
+                />
               </svg>
             </button>
-            {/* Notification toggle button */}
+            
             <button 
               onClick={toggleNotifications}
-              className="p-2 rounded-full hover:bg-gray-100 text-gray-500 mr-2"
-              title={notificationsEnabled ? "Disable notifications" : "Enable notifications"}
+              className="p-2 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 touch-manipulation"
+              aria-label={notificationsEnabled ? "Disable notifications" : "Enable notifications"}
             >
               {notificationsEnabled ? (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  className="h-5 w-5 text-gray-600" 
+                  fill="none" 
+                  viewBox="0 0 24 24" 
+                  stroke="currentColor"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={2} 
+                    d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" 
+                  />
                 </svg>
               ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
-                  <line x1="3" y1="3.5" x2="17" y2="3.5" stroke="currentColor" strokeWidth="1.5" />
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  className="h-5 w-5 text-gray-600" 
+                  fill="none" 
+                  viewBox="0 0 24 24" 
+                  stroke="currentColor"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={2} 
+                    d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
+                  />
                 </svg>
               )}
-            </button>
-            <button 
-              onClick={() => handleRefreshMessages()}
-              className="p-2 rounded-full hover:bg-gray-100 text-gray-500"
-              disabled={isLoadingMessages}
-              title="Refresh messages"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${isLoadingMessages ? 'animate-spin' : ''}`} viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
-              </svg>
             </button>
           </div>
-        </div>
-        
-        {/* Messages */}
-        <div className="flex-1 bg-gray-100 p-4 overflow-y-auto">
-          {isLoadingMessages ? (
-            <div className="flex justify-center items-center h-full">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
-            </div>
-          ) : messages.length === 0 ? (
-            <div className="flex justify-center items-center h-full">
-              <p className="text-gray-500">No messages yet</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex ${msg.direction === 'outgoing' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div
-                    className={`max-w-[75%] rounded-lg px-4 py-2 ${
-                      msg.direction === 'outgoing' 
-                        ? 'bg-purple-600 text-white' 
-                        : 'bg-white text-gray-800 border border-gray-200'
-                    }`}
-                  >
-                    <p>{msg.message}</p>
-                    <div className={`text-xs mt-1 ${msg.direction === 'outgoing' ? 'text-purple-200' : 'text-gray-500'}`}>
-                      {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </div>
-                  </div>
-                </div>
-              ))}
-              <div ref={messagesEndRef} />
-            </div>
-          )}
-        </div>
-        
-        {/* Message input */}
-        <div className="bg-white border-t border-gray-200 p-4">
-          {sendError && (
-            <div className="mb-2 text-sm text-red-500 p-2 bg-red-50 rounded">
-              {sendError}
-            </div>
-          )}
-          <form onSubmit={handleSendMessage} className="flex items-center">
-            <input
-              type="text"
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              placeholder="Type a message..."
-              className="flex-1 border border-gray-300 rounded-l-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
-            />
-            <button
-              type="submit"
-              disabled={isLoading || !newMessage.trim()}
-              className={`bg-purple-600 text-white px-4 py-2 rounded-r-lg ${
-                isLoading || !newMessage.trim() ? 'opacity-50 cursor-not-allowed' : 'hover:bg-purple-700'
-              }`}
-            >
-              {isLoading ? (
-                <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-              ) : (
-                'Send'
-              )}
-            </button>
-          </form>
         </div>
       </div>
       
-      {/* Contact info panel */}
-      {showContactInfo && (
-        <div className="w-80 border-l border-gray-200 bg-white p-4">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-medium text-gray-900">Contact Info</h3>
-            <button 
-              onClick={() => setShowContactInfo(false)}
-              className="p-2 rounded-full hover:bg-gray-100 text-gray-500"
+      {/* Messages container - scrollable area */}
+      <div className="flex-1 overflow-y-auto p-3 md:p-4 bg-gray-50 chat-messages">
+        {messages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-gray-500">
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              className="h-12 w-12 mb-4 text-gray-400" 
+              fill="none" 
+              viewBox="0 0 24 24" 
+              stroke="currentColor"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth={2} 
+                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" 
+              />
+            </svg>
+            <p>No messages yet</p>
+            <p className="text-sm mt-2">Start the conversation by sending a message below</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {messages.map((message) => (
+              <div 
+                key={message.id} 
+                className={`flex ${
+                  message.direction === 'incoming' ? 'justify-start' : 'justify-end'
+                }`}
+              >
+                <div 
+                  className={`max-w-[80%] md:max-w-[70%] p-3 rounded-lg break-words ${
+                    message.direction === 'incoming' 
+                      ? 'bg-white border border-gray-200 shadow-sm' 
+                      : 'bg-purple-600 text-white shadow-sm'
+                  }`}
+                >
+                  <p className="whitespace-pre-wrap">{message.message}</p>
+                  <p className={`text-xs mt-1 text-right ${
+                    message.direction === 'incoming' ? 'text-gray-500' : 'text-purple-200'
+                  }`}>
+                    {new Date(message.timestamp).toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </p>
+                </div>
+              </div>
+            ))}
+            <div ref={messagesEndRef} className="h-3" />
+          </div>
+        )}
+      </div>
+      
+      {/* Message input - sticky at bottom */}
+      <div className="border-t border-gray-200 bg-white p-3 md:p-4 sticky bottom-0 z-10 shadow-sm">
+        {sendError && (
+          <div className="mb-2 p-2 bg-red-100 text-red-700 rounded-lg text-sm">
+            {sendError}
+          </div>
+        )}
+        <form onSubmit={handleSendMessage} className="flex items-center">
+          <input
+            type="text"
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            placeholder="Type a message..."
+            className="flex-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white text-base"
+          />
+          <button
+            type="submit"
+            disabled={isLoading || !newMessage.trim()}
+            className={`ml-2 p-3 rounded-lg ${
+              isLoading || !newMessage.trim()
+                ? 'bg-gray-300 cursor-not-allowed'
+                : 'bg-purple-600 hover:bg-purple-700 text-white shadow-sm'
+            } transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 touch-manipulation`}
+          >
+            {isLoading ? (
+              <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            ) : (
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                className="h-6 w-6" 
+                fill="none" 
+                viewBox="0 0 24 24" 
+                stroke="currentColor"
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={2} 
+                  d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" 
+                />
               </svg>
-            </button>
-          </div>
-          
-          <div className="flex flex-col items-center mb-6">
-            <div className="w-24 h-24 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 text-3xl font-medium mb-3">
-              {activeConversation.contact?.name?.[0]?.toUpperCase() || activeConversation.phoneNumber[0]}
-            </div>
-            <h4 className="text-xl font-medium text-gray-900">
-              {activeConversation.contact?.name || 'Unknown'}
-            </h4>
-            <p className="text-gray-500">{activeConversation.phoneNumber}</p>
-          </div>
-          
-          <div className="border-t border-gray-200 pt-4">
-            <h5 className="text-sm font-medium text-gray-500 mb-2">About</h5>
-            <p className="text-gray-700">
-              {activeConversation.contact?.name ? `Contact from WhatsApp` : 'No information available'}
-            </p>
+            )}
+          </button>
+        </form>
+      </div>
+      
+      {/* Contact info sidebar - slide in from right */}
+      {showContactInfo && (
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex justify-end">
+          <div className="w-full max-w-md bg-white h-full overflow-y-auto animate-slide-in-right">
+            <ContactInfo 
+              conversation={activeConversation} 
+              onClose={() => setShowContactInfo(false)} 
+            />
           </div>
         </div>
       )}

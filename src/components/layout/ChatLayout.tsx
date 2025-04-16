@@ -59,8 +59,26 @@ const RecentChat = ({ name, email, time, status }) => (
 export default function ChatLayout() {
   const [activeView, setActiveView] = useState<'chat' | 'dashboard'>('dashboard');
   const [sidebarVisible, setSidebarVisible] = useState(true);
+  const [showChatOnMobile, setShowChatOnMobile] = useState(false);
+  const [isMobileView, setIsMobileView] = useState(false);
   const { connected, lastMessage } = useWebSocket();
-  const { selectedConversation, selectConversation, refreshMessages } = useConversations();
+  const { activeConversation: selectedConversation, refreshMessages } = useConversations();
+  
+  // Check if we're on mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobileView(window.innerWidth < 768);
+    };
+    
+    // Initial check
+    checkMobile();
+    
+    // Add resize listener
+    window.addEventListener('resize', checkMobile);
+    
+    // Cleanup
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
   
   // Memoize refreshMessages to avoid recreating it on every render
   const memoizedRefreshMessages = useCallback(() => {
@@ -73,8 +91,13 @@ export default function ChatLayout() {
   useEffect(() => {
     if (selectedConversation) {
       memoizedRefreshMessages();
+      
+      // On mobile, show the chat panel when a conversation is selected
+      if (isMobileView) {
+        setShowChatOnMobile(true);
+      }
     }
-  }, [selectedConversation, memoizedRefreshMessages]);
+  }, [selectedConversation, memoizedRefreshMessages, isMobileView]);
   
   // Listen for new messages via WebSocket
   useEffect(() => {
@@ -94,26 +117,34 @@ export default function ChatLayout() {
   const toggleSidebar = () => {
     setSidebarVisible(prev => !prev);
   };
+  
+  // Handle back button click on mobile
+  const handleBackToList = () => {
+    setShowChatOnMobile(false);
+  };
+  
+  // Handle conversation selection on mobile
+  const handleConversationSelect = () => {
+    setShowChatOnMobile(true);
+  };
 
   return (
-    <div className="flex h-screen bg-purple-50">
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
       {/* Sidebar with toggle functionality */}
-      <Sidebar 
-        activeView={activeView} 
-        onViewChange={setActiveView}
-        isVisible={sidebarVisible}
-        toggleSidebar={toggleSidebar}
-      />
+      <div className={`${sidebarVisible ? 'w-20' : 'w-0'} transition-all duration-300 ease-in-out z-20`}>
+        <Sidebar 
+          activeView={activeView} 
+          onViewChange={setActiveView}
+          isVisible={sidebarVisible}
+          toggleSidebar={toggleSidebar}
+        />
+      </div>
       
       {/* Main Content - adjusts based on sidebar visibility */}
-      <div 
-        className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 ease-in-out ${
-          sidebarVisible ? 'ml-20' : 'ml-0'
-        }`}
-      >
+      <div className="flex-1 flex flex-col overflow-hidden">
         {/* WebSocket Connection Status */}
         {!connected && (
-          <div className="bg-yellow-100 text-yellow-800 px-4 py-2 text-sm">
+          <div className="bg-yellow-100 text-yellow-800 px-4 py-2 text-sm sticky top-0 left-0 right-0 z-30">
             Connecting to server for real-time updates...
           </div>
         )}
@@ -123,9 +154,36 @@ export default function ChatLayout() {
         
         {/* Chat View */}
         {activeView === 'chat' && (
-          <div className="flex-1 flex overflow-hidden">
-            <ConversationPanel />
-            <ChatPanel />
+          <div className="flex-1 flex overflow-hidden h-full">
+            {/* Conversation List - Hidden on mobile when chat is shown */}
+            <div 
+              className={`${
+                isMobileView && showChatOnMobile 
+                  ? 'hidden' 
+                  : 'flex'
+              } transition-all duration-300 ease-in-out h-full ${
+                isMobileView ? 'w-full' : 'w-96'
+              }`}
+            >
+              <ConversationPanel 
+                isMobile={isMobileView} 
+                onConversationSelect={handleConversationSelect} 
+              />
+            </div>
+            
+            {/* Chat Panel - Full width on mobile when shown */}
+            <div 
+              className={`${
+                isMobileView && !showChatOnMobile 
+                  ? 'hidden' 
+                  : 'flex'
+              } transition-all duration-300 ease-in-out h-full flex-1`}
+            >
+              <ChatPanel 
+                isMobile={isMobileView} 
+                onBackClick={handleBackToList} 
+              />
+            </div>
           </div>
         )}
       </div>
