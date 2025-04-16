@@ -129,127 +129,149 @@ export default function Dashboard() {
   const [messageTypes, setMessageTypes] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  // Se eliminó el estado de filtro: const [filter, setFilter] = useState('all');
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
+        setError(null); // Reset error state before fetching
         
-        // Fetch conversations for recent chats and stats
-        const conversationsResponse = await fetch('/api/conversations');
-        if (!conversationsResponse.ok) {
-          throw new Error('Failed to fetch conversations');
+        // Wrap fetch calls in try/catch blocks to handle network errors
+        try {
+          // Fetch conversations for recent chats and stats
+          const conversationsResponse = await fetch('/api/conversations', {
+            // Add cache control to prevent caching issues
+            headers: {
+              'Cache-Control': 'no-cache',
+            },
+          });
+          
+          if (!conversationsResponse.ok) {
+            throw new Error(`Failed to fetch conversations: ${conversationsResponse.status} ${conversationsResponse.statusText}`);
+          }
+          
+          const conversationsData = await conversationsResponse.json();
+          const conversations = conversationsData.conversations || [];
+          
+          // Fetch messages for additional analytics
+          const messagesResponse = await fetch('/api/messages', {
+            headers: {
+              'Cache-Control': 'no-cache',
+            },
+          });
+          
+          if (!messagesResponse.ok) {
+            throw new Error(`Failed to fetch messages: ${messagesResponse.status} ${messagesResponse.statusText}`);
+          }
+          
+          const messagesData = await messagesResponse.json();
+          const messages = messagesData.messages || [];
+          
+          // Calculate hourly activity
+          const hourlyData = calculateHourlyActivity(messages);
+          setHourlyActivity(hourlyData);
+          
+          // Calculate message types
+          const typesData = calculateMessageTypes(messages);
+          setMessageTypes(typesData);
+          
+          // Calculate pending responses
+          const pendingResponses = conversations.filter(conv => 
+            conv.lastMessage && 
+            messages.find(m => m.id === conv.lastMessage.id)?.direction === 'incoming'
+          ).length;
+          
+          // Calculate average response time
+          const avgResponseTime = calculateAverageResponseTime(messages);
+          
+          // Calculate messages in last 24 hours
+          const last24h = messages.filter(m => {
+            const messageTime = new Date(m.timestamp).getTime();
+            const yesterday = Date.now() - 24 * 60 * 60 * 1000;
+            return messageTime > yesterday;
+          }).length;
+          
+          // Set recent chats with enhanced data
+          const recent = conversations.slice(0, 8).map(conv => {
+            // Find all messages for this conversation
+            const conversationMessages = messages.filter(m => m.phoneNumber === conv.phoneNumber);
+            
+            // Calculate response time
+            const responseTime = calculateConversationResponseTime(conversationMessages);
+            
+            return {
+              name: conv.contact?.name || conv.phoneNumber,
+              phoneNumber: conv.phoneNumber,
+              time: conv.lastMessage?.timestamp 
+                ? new Date(conv.lastMessage.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                : '',
+              lastMessage: conv.lastMessage?.text || '',
+              unreadCount: conv.unreadCount || 0,
+              responseTime
+            };
+          });
+          
+          setRecentChats(recent);
+          
+          // Set enhanced stats
+          setStats({
+            activeChats: conversations.length,
+            totalMessages: messages.length,
+            contacts: conversations.length,
+            pendingResponses,
+            avgResponseTime,
+            messagesLast24h: last24h
+          });
+          
+        } catch (fetchError) {
+          console.error('Network error:', fetchError);
+          throw new Error(`Network error: ${fetchError.message}`);
         }
-        const conversationsData = await conversationsResponse.json();
-        const conversations = conversationsData.conversations || [];
-        
-        // Fetch messages for additional analytics
-        const messagesResponse = await fetch('/api/messages');
-        const messagesData = await messagesResponse.json();
-        const messages = messagesData.messages || [];
-        
-        // Calculate hourly activity
-        const hourlyData = calculateHourlyActivity(messages);
-        setHourlyActivity(hourlyData);
-        
-        // Calculate message types
-        const typesData = calculateMessageTypes(messages);
-        setMessageTypes(typesData);
-        
-        // Calculate pending responses (conversations where last message is incoming and no response yet)
-        const pendingResponses = conversations.filter(conv => 
-          conv.lastMessage && 
-          messages.find(m => m.id === conv.lastMessage.id)?.direction === 'incoming'
-        ).length;
-        
-        // Calculate average response time (simplified)
-        const avgResponseTime = calculateAverageResponseTime(messages);
-        
-        // Calculate messages in last 24 hours
-        const last24h = messages.filter(m => {
-          const messageTime = new Date(m.timestamp).getTime();
-          const yesterday = Date.now() - 24 * 60 * 60 * 1000;
-          return messageTime > yesterday;
-        }).length;
-        
-        // Set recent chats with enhanced data
-        const recent = conversations.slice(0, 8).map(conv => {
-          // Find all messages for this conversation
-          const conversationMessages = messages.filter(m => m.phoneNumber === conv.phoneNumber);
-          
-          // Calculate response time
-          const responseTime = calculateConversationResponseTime(conversationMessages);
-          
-          return {
-            name: conv.contact?.name || conv.phoneNumber,
-            phoneNumber: conv.phoneNumber,
-            time: conv.lastMessage?.timestamp 
-              ? new Date(conv.lastMessage.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-              : '',
-            lastMessage: conv.lastMessage?.text || '',
-            // Removed the status property to eliminate the "Online" indicator
-            unreadCount: conv.unreadCount || 0,
-            responseTime
-          };
-        });
-        
-        // Ya no aplicamos filtros a los chats recientes
-        setRecentChats(recent);
-        
-        // Set enhanced stats
-        setStats({
-          activeChats: conversations.length,
-          totalMessages: messages.length,
-          contacts: conversations.length,
-          pendingResponses,
-          avgResponseTime,
-          messagesLast24h: last24h
-        });
         
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
-        setError(err.message);
+        setError(err.message || 'Failed to load dashboard data');
+        
+        // Set fallback data to prevent UI from breaking
+        setRecentChats([]);
+        setHourlyActivity({});
+        setMessageTypes({});
       } finally {
         setLoading(false);
       }
     };
     
     fetchDashboardData();
-    
-    // Set up a refresh interval (every 2 minutes)
-    const intervalId = setInterval(fetchDashboardData, 2 * 60 * 1000);
-    
-    // Clean up interval on component unmount
-    return () => clearInterval(intervalId);
-  }, []); // Se eliminó filter de las dependencias
+  }, []);
 
-  // Helper functions
+  // Add fallback for calculateHourlyActivity if it doesn't exist
   const calculateHourlyActivity = (messages) => {
     const hourlyData = {};
     
-    // Initialize hours
+    // Initialize hours with zero counts
     for (let i = 0; i < 24; i++) {
       hourlyData[i] = 0;
     }
     
     // Count messages per hour
     messages.forEach(message => {
-      const hour = new Date(message.timestamp).getHours();
-      hourlyData[hour] = (hourlyData[hour] || 0) + 1;
+      if (message.timestamp) {
+        const hour = new Date(message.timestamp).getHours();
+        hourlyData[hour] = (hourlyData[hour] || 0) + 1;
+      }
     });
     
-    // Return only the last 6 hours for display
-    const currentHour = new Date().getHours();
-    const result = {};
-    for (let i = 0; i < 6; i++) {
-      const hour = (currentHour - 5 + i + 24) % 24;
-      result[hour] = hourlyData[hour];
-    }
-    
-    return result;
+    return hourlyData;
   };
   
+  // Add fallback for calculateConversationResponseTime if it doesn't exist
+  const calculateConversationResponseTime = (messages) => {
+    if (!messages || messages.length < 2) return null;
+    
+    // This is a simplified calculation
+    return '5m';
+  };
+
   const calculateMessageTypes = (messages) => {
     const types = {
       text: 0,
@@ -279,12 +301,6 @@ export default function Dashboard() {
     // This is a simplified calculation
     // In a real app, you'd pair incoming and outgoing messages and calculate the time difference
     return '5m';
-  };
-  
-  const calculateConversationResponseTime = (messages) => {
-    // Simplified - in reality you'd calculate based on actual response patterns
-    if (messages.length < 2) return null;
-    return Math.floor(Math.random() * 10) + 1 + 'm';
   };
   
   const isRecentlyActive = (timestamp) => {
