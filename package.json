@@ -8,6 +8,7 @@
     "start": "NODE_ENV=production node dist/server.js"
   },
   "dependencies": {
+    "@heroicons/react": "^2.2.0",
     "framer-motion": "^12.6.3",
     "next": "15.2.4",
     "pg": "^8.14.1",
