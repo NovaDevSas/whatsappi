@@ -61,6 +61,7 @@ export default function LandingCard() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.8 }}
+      style={{ minHeight: '100vh' }}
     >
       {/* Video de fondo */}
       <div className="absolute inset-0 z-0 overflow-hidden">
@@ -91,140 +92,131 @@ export default function LandingCard() {
           Tu navegador no soporta videos HTML5.
         </video>
         
-        {/* Overlay para mejorar la legibilidad del contenido con gradiente mejorado */}
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-900/30 via-purple-800/25 to-purple-700/20 backdrop-blur-[1px]"></div>
+        {/* Overlay para mejorar la legibilidad del contenido */}
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-900/40 via-purple-800/30 to-purple-700/20 backdrop-blur-[1px]"></div>
       </div>
       
       {/* Contenido principal */}
-      <div className="relative z-10 w-full max-w-6xl mx-auto px-4">
-        {/* Logo pequeño en la esquina */}
-        <motion.div
-          className="absolute top-8 left-8 flex items-center"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.6 }}
-        >
-         
-        </motion.div>
-        
-        {/* Elemento central luminoso */}
-        <div className="relative flex flex-col md:flex-row items-center justify-between py-20">
-          {/* Texto principal */}
-          <motion.div
-            className="md:w-1/2 mb-12 md:mb-0 z-10 transform -translate-y-8"
-            initial={{ opacity: 0, x: -50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.3, duration: 0.8 }}
-          >
-            <h1 className="text-5xl md:text-7xl font-bold text-white mb-4 tracking-tight leading-tight relative">
-              NovaChat
-              <span className="absolute -bottom-1 left-0 w-1/4 h-1 bg-purple-500 rounded-full"></span>
-            </h1>
-            <p className="text-gray-300 max-w-md mb-8 text-sm md:text-base">
-              Maneja tu WhatsApp con nuestro mejor agente de Nova. Herramientas avanzadas para una comunicación más efectiva.
-            </p>
+      <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col h-full">
+        {/* Contenedor principal con mejor estructura */}
+        <div className="flex flex-col items-center justify-center min-h-screen py-8 md:py-12">
+          {/* Contenido central con mejor distribución */}
+          <div className="w-full max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center">
+            {/* Columna de texto */}
+            <motion.div
+              className="flex flex-col space-y-6 text-center md:text-left order-2 md:order-1"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3, duration: 0.8 }}
+            >
+              <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white tracking-tight leading-none">
+                NovaChat
+                <div className="h-1 w-20 bg-purple-500 mt-2 mx-auto md:mx-0 rounded-full"></div>
+              </h1>
+              
+              <p className="text-gray-300 text-base sm:text-lg max-w-md mx-auto md:mx-0">
+                Maneja tu WhatsApp con nuestro mejor agente de Nova. Herramientas avanzadas para una comunicación más efectiva.
+              </p>
+              
+              <div className="pt-2">
+                <button
+                  onClick={handleNavigation}
+                  disabled={isLoading}
+                  className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-full shadow-sm text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-all duration-300 ease-in-out"
+                >
+                  {isLoading ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span>Cargando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Comienza tu exploración</span>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                      </svg>
+                    </>
+                  )}
+                </button>
+              </div>
+            </motion.div>
             
-            {/* Botones de acción */}
-            <div className="flex space-x-4">
-              <button
-                onClick={handleNavigation}
-                disabled={isLoading}
-                className="bg-purple-600 text-white font-medium py-3 px-8 rounded-full shadow-lg hover:shadow-purple-500/50 hover:bg-purple-500 transform hover:scale-105 transition-all duration-300 ease-in-out flex items-center text-sm relative overflow-hidden group"
-              >
-                <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-purple-500/40 to-purple-700/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ease-in-out"></span>
-                {isLoading ? (
-                  <>
-                    <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <span className="relative z-10">Cargando...</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="relative z-10">Comienza tu exploración</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-2 relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                    </svg>
-                  </>
-                )}
-                <span className="absolute -bottom-1 left-1/2 w-0 h-0.5 bg-white transform -translate-x-1/2 group-hover:w-3/4 transition-all duration-300 ease-in-out"></span>
-              </button>
+            {/* Columna visual */}
+            <motion.div
+              className="flex justify-center items-center order-1 md:order-2"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.5, duration: 0.8 }}
+            >
+              <div className="relative w-48 h-48 sm:w-64 sm:h-64 md:w-72 md:h-72">
+                {/* Círculo exterior */}
+                <div className="absolute inset-0 rounded-full border-2 border-purple-400/30 animate-pulse"></div>
+                
+                {/* Elemento central */}
+                <motion.div
+                  className="absolute inset-0 flex items-center justify-center"
+                  animate={{ 
+                    rotateY: [0, 180, 360],
+                  }}
+                  transition={{ 
+                    duration: 20,
+                    repeat: Infinity,
+                    ease: "linear"
+                  }}
+                >
+                  <div className="w-36 h-36 sm:w-44 sm:h-44 md:w-52 md:h-52 bg-gradient-to-br from-purple-500 to-purple-700 rounded-full shadow-lg shadow-purple-500/20 flex items-center justify-center">
+                    <div className="w-28 h-28 sm:w-36 sm:h-36 md:w-40 md:h-40 rounded-full bg-[#0a192f] flex items-center justify-center">
+                      <Image 
+                        src="/images/admin.png" 
+                        alt="Nova Dev Logo" 
+                        width={80} 
+                        height={80} 
+                        className="h-16 w-auto sm:h-20 sm:w-auto"
+                        priority
+                      />
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+            </motion.div>
+          </div>
+          
+          {/* Estadísticas en la parte inferior */}
+          <motion.div
+            className="w-full max-w-2xl mx-auto mt-12 md:mt-16 grid grid-cols-3 gap-4"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.7, duration: 0.8 }}
+          >
+            <div className="text-center">
+              <p className="text-xl sm:text-2xl font-bold text-white">80K+</p>
+              <p className="text-xs text-gray-400 uppercase tracking-wider">Optimización</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xl sm:text-2xl font-bold text-white">87K+</p>
+              <p className="text-xs text-gray-400 uppercase tracking-wider">Gestión</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xl sm:text-2xl font-bold text-white">80K+</p>
+              <p className="text-xs text-gray-400 uppercase tracking-wider">Contactos</p>
             </div>
           </motion.div>
           
-          {/* Elemento visual central */}
+          {/* Barra de progreso en la parte inferior */}
           <motion.div
-            className="md:w-1/2 relative"
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.5, duration: 0.8 }}
+            className="w-full max-w-2xl mx-auto mt-8 px-4 mb-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.9, duration: 0.8 }}
           >
-            <div className="relative w-[300px] h-[300px] mx-auto transform -translate-y-8">
-              {/* Círculo luminoso */}
-              <div className="absolute inset-0 rounded-full border-2 border-purple-400/30"></div>
-              
-              {/* Elemento central */}
-              <motion.div
-                className="absolute inset-0 flex items-center justify-center"
-                animate={{ 
-                  rotateY: [0, 180, 360],
-                }}
-                transition={{ 
-                  duration: 20,
-                  repeat: Infinity,
-                  ease: "linear"
-                }}
-              >
-                <div className="w-40 h-40 bg-gradient-to-br from-purple-500 to-purple-700 rounded-full shadow-lg shadow-purple-500/20 flex items-center justify-center">
-                  <div className="w-32 h-32 rounded-full bg-[#0a192f] flex items-center justify-center">
-                    <Image 
-                      src="/images/admin.png" 
-                      alt="Nova Dev Logo" 
-                      width={80} 
-                      height={80} 
-                      className="h-16 w-auto"
-                      priority
-                    />
-                  </div>
-                </div>
-              </motion.div>
+            <div className="h-1 w-full bg-gray-800 rounded-full overflow-hidden">
+              <div className="h-full w-3/4 bg-gradient-to-r from-purple-500 to-purple-400"></div>
             </div>
           </motion.div>
         </div>
-        
-        {/* Estadísticas en la parte inferior */}
-        <motion.div
-          className="absolute bottom-12 left-0 right-0 flex justify-center space-x-16"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.7, duration: 0.8 }}
-        >
-          <div className="text-center">
-            <p className="text-2xl font-bold text-white">80K+</p>
-            <p className="text-xs text-gray-400 uppercase tracking-wider">Optimización</p>
-          </div>
-          <div className="text-center">
-            <p className="text-2xl font-bold text-white">87K+</p>
-            <p className="text-xs text-gray-400 uppercase tracking-wider">Gestión</p>
-          </div>
-          <div className="text-center">
-            <p className="text-2xl font-bold text-white">80K+</p>
-            <p className="text-xs text-gray-400 uppercase tracking-wider">Contactos</p>
-          </div>
-        </motion.div>
-        
-        {/* Barra de progreso en la parte inferior */}
-        <motion.div
-          className="absolute bottom-4 left-0 right-0 px-4"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.9, duration: 0.8 }}
-        >
-          <div className="h-1 w-full bg-gray-800 rounded-full overflow-hidden">
-            <div className="h-full w-3/4 bg-gradient-to-r from-purple-500 to-purple-400"></div>
-          </div>
-        </motion.div>
       </div>
     </motion.div>
   );
