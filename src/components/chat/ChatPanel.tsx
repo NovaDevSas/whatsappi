@@ -1,35 +1,13 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { useConversations } from '@/contexts/ConversationContext';
 import { useWebSocket } from '@/contexts/WebSocketContext';
+import ConversationDetail from '../conversation/ConversationDetail';
 import ContactInfo from './ContactInfo';
 
 interface ChatPanelProps {
   isMobile?: boolean;
   onBackClick?: () => void;
 }
-
-// Helper function to format the date for the separator
-const formatDateSeparator = (date: Date): string => {
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-
-  // Reset time part for accurate date comparison
-  today.setHours(0, 0, 0, 0);
-  yesterday.setHours(0, 0, 0, 0);
-  const messageDateOnly = new Date(date);
-  messageDateOnly.setHours(0, 0, 0, 0);
-
-  if (messageDateOnly.getTime() === today.getTime()) {
-    return 'Today';
-  }
-  if (messageDateOnly.getTime() === yesterday.getTime()) {
-    return 'Yesterday';
-  }
-  // Example format: Aug 15, 2024
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-};
-
 
 export default function ChatPanel({ isMobile = false, onBackClick }: ChatPanelProps) {
   const { activeConversation, messages, sendMessage, refreshMessages } = useConversations();
@@ -108,8 +86,10 @@ export default function ChatPanel({ isMobile = false, onBackClick }: ChatPanelPr
     );
   }
 
-  // Declare previousDateString here, before the return statement
-  let previousDateString: string | null = null;
+  // Define the function to toggle the contact info sidebar
+  const toggleContactInfo = () => {
+    setShowContactInfo(!showContactInfo);
+  };
 
   return (
     <div className="flex flex-col h-full w-full bg-gray-50 overflow-hidden">
@@ -141,14 +121,17 @@ export default function ChatPanel({ isMobile = false, onBackClick }: ChatPanelPr
           
           <div 
             className="flex items-center flex-1 min-w-0 cursor-pointer"
-            onClick={() => setShowContactInfo(!showContactInfo)}
+            onClick={toggleContactInfo} // Use the defined toggle function
           >
             <div className="w-10 h-10 flex-shrink-0 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-medium mr-3 shadow-sm">
               {(activeConversation.contact?.name || activeConversation.phoneNumber).charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
               <h2 className="font-medium text-gray-900 truncate">
-                {activeConversation.contact?.name || activeConversation.phoneNumber}
+                {/* Truncate name if longer than 10 characters */}
+                {(activeConversation.contact?.name || activeConversation.phoneNumber).length > 10
+                  ? `${(activeConversation.contact?.name || activeConversation.phoneNumber).substring(0, 10)}...`
+                  : (activeConversation.contact?.name || activeConversation.phoneNumber)}
               </h2>
               <div className="flex items-center">
                 <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-gray-300'} mr-2`}></span>
@@ -224,50 +207,59 @@ export default function ChatPanel({ isMobile = false, onBackClick }: ChatPanelPr
       </div>
       
       {/* Messages container - scrollable area */}
-      <div className="flex-1 overflow-y-auto p-3 md:p-4 bg-gray-50 chat-messages space-y-2">
-        {messages.map((message, index) => {
-          const messageDate = new Date(message.timestamp);
-          const currentDateString = messageDate.toDateString();
-          // Now 'previousDateString' is accessible here
-          const showSeparator = currentDateString !== previousDateString;
-
-          // Update previousDateString for the next iteration
-          previousDateString = currentDateString;
-
-          return (
-            <React.Fragment key={message.id}>
-              {/* Render Date Separator if needed */}
-              {showSeparator && (
-                <div className="relative py-3">
-                  <div className="relative flex justify-center">
-                    <span className="bg-gray-50 px-3 text-xs font-medium text-gray-500 rounded-full shadow-sm">
-                      {formatDateSeparator(messageDate)}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Render the actual message */}
-              <div className={`flex ${message.direction === 'outgoing' ? 'justify-end' : 'justify-start'} animate-fade-in-up`}>
-                 <div className={`max-w-xs md:max-w-md lg:max-w-lg px-3 py-2 rounded-lg shadow-sm ${
-                    message.direction === 'outgoing'
-                      ? 'bg-purple-500 text-white'
-                      : 'bg-white text-gray-800 border border-gray-200'
+      <div className="flex-1 overflow-y-auto p-3 md:p-4 bg-gray-50 chat-messages">
+        {messages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-gray-500">
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              className="h-12 w-12 mb-4 text-gray-400" 
+              fill="none" 
+              viewBox="0 0 24 24" 
+              stroke="currentColor"
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth={2} 
+                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" 
+              />
+            </svg>
+            <p>No messages yet</p>
+            <p className="text-sm mt-2">Start the conversation by sending a message below</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {messages.map((message) => (
+              <div 
+                key={message.id} 
+                className={`flex ${
+                  message.direction === 'incoming' ? 'justify-start' : 'justify-end'
+                }`}
+              >
+                <div 
+                  className={`max-w-[80%] md:max-w-[70%] p-3 rounded-lg break-words ${
+                    message.direction === 'incoming' 
+                      ? 'bg-white border border-gray-200 shadow-sm' 
+                      : 'bg-purple-600 text-white shadow-sm'
+                  }`}
+                >
+                  <p className="whitespace-pre-wrap">{message.message}</p>
+                  <p className={`text-xs mt-1 text-right ${
+                    message.direction === 'incoming' ? 'text-gray-500' : 'text-purple-200'
                   }`}>
-                    <p className="text-sm break-words">{message.message}</p> {/* Added break-words */}
-                    <span className={`text-xs mt-1 block ${
-                      message.direction === 'outgoing' ? 'text-purple-200 text-right' : 'text-gray-400 text-right'
-                    }`}>
-                      {messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
+                    {new Date(message.timestamp).toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </p>
+                </div>
               </div>
-            </React.Fragment>
-          );
-        })}
-        <div ref={messagesEndRef} /> {/* For scrolling */}
+            ))}
+            <div ref={messagesEndRef} className="h-3" />
+          </div>
+        )}
       </div>
-
+      
       {/* Message input - sticky at bottom */}
       <div className="border-t border-gray-200 bg-white p-3 md:p-4 sticky bottom-0 z-10 shadow-sm">
         {sendError && (
@@ -314,17 +306,19 @@ export default function ChatPanel({ isMobile = false, onBackClick }: ChatPanelPr
         </form>
       </div>
       
-      {/* Contact info sidebar - slide in from right */}
-      {showContactInfo && (
+      {/* Contact info sidebar - slide in from right (Corrected Structure) */}
+      {showContactInfo && activeConversation && ( // Ensure activeConversation exists
         <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex justify-end">
           <div className="w-full max-w-md bg-white h-full overflow-y-auto animate-slide-in-right">
-            <ContactInfo 
-              conversation={activeConversation} 
-              onClose={() => setShowContactInfo(false)} 
+            {/* Render ContactInfo component here */}
+            <ContactInfo
+              conversation={activeConversation}
+              onClose={toggleContactInfo} // Pass the toggle function
             />
           </div>
         </div>
       )}
+      {/* Removed the incorrectly nested/redundant block */}
     </div>
   );
 }
