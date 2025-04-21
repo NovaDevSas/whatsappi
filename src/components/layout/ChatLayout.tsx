@@ -131,15 +131,15 @@ export default function ChatLayout() {
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
       {/* Sidebar with toggle functionality */}
-      <div className={`${sidebarVisible ? 'w-20' : 'w-0'} transition-all duration-300 ease-in-out z-20`}>
-        <Sidebar 
-          activeView={activeView} 
+      <div className={`${sidebarVisible ? 'w-16' : 'w-0'} transition-all duration-300 ease-in-out z-20`}>
+        <Sidebar
+          activeView={activeView}
           onViewChange={setActiveView}
           isVisible={sidebarVisible}
           toggleSidebar={toggleSidebar}
         />
       </div>
-      
+
       {/* Main Content - adjusts based on sidebar visibility */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* WebSocket Connection Status */}

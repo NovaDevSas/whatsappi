@@ -22,7 +22,7 @@ export default function Sidebar({ activeView, onViewChange, isVisible, toggleSid
       {/* Floating toggle button - always visible */}
       <button 
         onClick={toggleSidebar}
-        className={`fixed top-4 left-4 z-50 rounded-full bg-white text-purple-600 flex items-center justify-center font-bold shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out ${
+        className={`fixed top-4 left-2 z-50 rounded-full bg-white text-purple-600 flex items-center justify-center font-bold shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out ${ // Changed left-4 to left-2
           isVisible ? 'toggle-btn-expanded' : 'toggle-btn-collapsed hover:scale-110'
         }`}
         title={isVisible ? "Ocultar menú" : "Mostrar menú"}
@@ -36,7 +36,7 @@ export default function Sidebar({ activeView, onViewChange, isVisible, toggleSid
       
       {/* Sidebar - conditionally rendered with animation classes */}
       <div 
-        className={`fixed top-0 left-0 w-20 bg-purple-600 text-white flex flex-col items-center py-6 h-screen z-40 transform transition-all duration-300 ease-in-out ${
+        className={`fixed top-0 left-0 w-16 bg-purple-600 text-white flex flex-col items-center py-6 h-screen z-40 transform transition-all duration-300 ease-in-out ${
           isVisible ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0'
         }`}
       >
@@ -148,3 +148,4 @@ export default function Sidebar({ activeView, onViewChange, isVisible, toggleSid
     </>
   );
 }
+// Remove the extraneous 'e="currentColor"' that was likely here
