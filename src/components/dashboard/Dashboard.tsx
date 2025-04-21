@@ -233,12 +233,18 @@ export default function Dashboard() {
     contacts: 0,
     pendingResponses: 0,
     avgResponseTime: '0m',
-    messagesLast24h: 0
+    messagesLast24h: 0,
+    activeContacts7d: 0
   });
   
   const [recentChats, setRecentChats] = useState([]);
   const [hourlyActivity, setHourlyActivity] = useState({});
-  const [messageTypes, setMessageTypes] = useState({});
+  const [messageTypes, setMessageTypes] = useState({
+    text: 0,
+    media: 0,
+    document: 0,
+    other: 0
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -247,74 +253,21 @@ export default function Dashboard() {
       try {
         setLoading(true);
         
-        // Fetch conversations for recent chats and stats
-        const conversationsResponse = await fetch('/api/conversations');
-        if (!conversationsResponse.ok) {
-          throw new Error('Failed to fetch conversations');
+        // Fetch all dashboard data from the dedicated API endpoint
+        const response = await fetch('/api/dashboard');
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Failed to fetch dashboard data: ${errorText}`);
         }
-        const conversationsData = await conversationsResponse.json();
-        const conversations = conversationsData.conversations || [];
         
-        // Fetch messages for additional analytics
-        const messagesResponse = await fetch('/api/messages');
-        const messagesData = await messagesResponse.json();
-        const messages = messagesData.messages || [];
+        const data = await response.json();
         
-        // Calculate hourly activity
-        const hourlyData = calculateHourlyActivity(messages);
-        setHourlyActivity(hourlyData);
-        
-        // Calculate message types
-        const typesData = calculateMessageTypes(messages);
-        setMessageTypes(typesData);
-        
-        // Calculate pending responses
-        const pendingResponses = conversations.filter(conv => 
-          conv.lastMessage && 
-          messages.find(m => m.id === conv.lastMessage.id)?.direction === 'incoming'
-        ).length;
-        
-        // Calculate average response time
-        const avgResponseTime = calculateAverageResponseTime(messages);
-        
-        // Calculate messages in last 24 hours
-        const last24h = messages.filter(m => {
-          const messageTime = new Date(m.timestamp).getTime();
-          const yesterday = Date.now() - 24 * 60 * 60 * 1000;
-          return messageTime > yesterday;
-        }).length;
-        
-        // Set recent chats with enhanced data
-        const recent = conversations.slice(0, 8).map(conv => {
-          // Find all messages for this conversation
-          const conversationMessages = messages.filter(m => m.phoneNumber === conv.phoneNumber);
-          
-          // Calculate response time
-          const responseTime = calculateConversationResponseTime(conversationMessages);
-          
-          return {
-            name: conv.contact?.name || conv.phoneNumber,
-            phoneNumber: conv.phoneNumber,
-            time: conv.lastMessage?.timestamp 
-              ? new Date(conv.lastMessage.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-              : '',
-            lastMessage: conv.lastMessage?.text || '',
-            unreadCount: conv.unreadCount || 0,
-            responseTime
-          };
-        });
-        
-        setRecentChats(recent);
-        
-        // Update stats
-        setStats({
-          activeChats: conversations.length,
-          totalMessages: messages.length,
-          contacts: conversations.length,
-          pendingResponses,
-          avgResponseTime,
-          messagesLast24h: last24h
-        });
+        // Update state with real data from API
+        setStats(data.stats);
+        setRecentChats(data.recentChats);
+        setHourlyActivity(data.hourlyActivity);
+        setMessageTypes(data.messageTypes);
         
         setError(null);
       } catch (err) {
@@ -334,61 +287,6 @@ export default function Dashboard() {
     return () => clearInterval(intervalId);
   }, []);
 
-  const calculateHourlyActivity = (messages) => {
-    const hourlyData = {};
-    
-    // Initialize hours
-    for (let i = 0; i < 24; i++) {
-      hourlyData[i] = 0;
-    }
-    
-    // Count messages per hour
-    messages.forEach(message => {
-      if (message.timestamp) {
-        const date = new Date(message.timestamp);
-        const hour = date.getHours();
-        hourlyData[hour] = (hourlyData[hour] || 0) + 1;
-      }
-    });
-    
-    return hourlyData;
-  };
-  
-  const calculateMessageTypes = (messages) => {
-    const types = {
-      'Text': 0,
-      'Media': 0,
-      'Document': 0,
-      'Other': 0
-    };
-    
-    messages.forEach(message => {
-      if (message.type === 'text') {
-        types['Text']++;
-      } else if (['image', 'video', 'audio'].includes(message.type)) {
-        types['Media']++;
-      } else if (message.type === 'document') {
-        types['Document']++;
-      } else {
-        types['Other']++;
-      }
-    });
-    
-    return types;
-  };
-  
-  const calculateAverageResponseTime = (messages) => {
-    // This is a simplified calculation
-    // In a real app, you'd pair incoming and outgoing messages and calculate the time difference
-    return '5m';
-  };
-  
-  const calculateConversationResponseTime = (messages) => {
-    // Simplified - in reality you'd calculate based on actual response patterns
-    if (messages.length < 2) return null;
-    return Math.floor(Math.random() * 10) + 1 + 'm';
-  };
-  
   const handleChatSelect = (phoneNumber) => {
     // Navigate to the chat view and select this conversation
     router.push('/chat');
@@ -421,7 +319,7 @@ export default function Dashboard() {
       </div>
     );
   }
-
+  
   // Previous loading and error states remain unchanged
   
   return (

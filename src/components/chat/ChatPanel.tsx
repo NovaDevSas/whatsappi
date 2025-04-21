@@ -19,6 +19,7 @@ export default function ChatPanel({ isMobile = false, onBackClick }: ChatPanelPr
   const [sendError, setSendError] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [messageGroups, setMessageGroups] = useState<{date: string, messages: any[]}[]>([]);
   
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -27,8 +28,94 @@ export default function ChatPanel({ isMobile = false, onBackClick }: ChatPanelPr
     }
   }, [messages]);
   
+  // Group messages by date whenever messages change
+  useEffect(() => {
+    if (messages.length > 0) {
+      setMessageGroups(groupMessagesByDate(messages));
+    } else {
+      setMessageGroups([]);
+    }
+  }, [messages]);
+  
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+  
+  // Function to group messages by date
+  const groupMessagesByDate = (messages) => {
+    // Sort messages by timestamp
+    const sortedMessages = [...messages].sort((a, b) => 
+      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
+    
+    const groups = [];
+    let currentDate = null;
+    let currentGroup = [];
+    
+    sortedMessages.forEach(message => {
+      const messageDate = new Date(message.timestamp);
+      
+      // Verify date is valid
+      if (isNaN(messageDate.getTime())) {
+        console.warn('Invalid timestamp:', message.timestamp);
+        return;
+      }
+      
+      // Format YYYY-MM-DD for consistent comparison
+      const dateStr = messageDate.toISOString().split('T')[0];
+      
+      if (dateStr !== currentDate) {
+        // If we have a current group, save it
+        if (currentDate && currentGroup.length > 0) {
+          groups.push({
+            date: currentDate,
+            messages: [...currentGroup]
+          });
+        }
+        
+        // Start a new group
+        currentDate = dateStr;
+        currentGroup = [message];
+      } else {
+        // Add to current group
+        currentGroup.push(message);
+      }
+    });
+    
+    // Don't forget to add the last group
+    if (currentDate && currentGroup.length > 0) {
+      groups.push({
+        date: currentDate,
+        messages: currentGroup
+      });
+    }
+    
+    return groups;
+  };
+  
+  // Function to get readable date format
+  const getReadableDate = (dateStr) => {
+    // Convert from ISO format (YYYY-MM-DD) to Date
+    const date = new Date(dateStr);
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    if (date.toDateString() === today.toDateString()) {
+      return "Today";
+    } else if (date.toDateString() === yesterday.toDateString()) {
+      return "Yesterday";
+    } else {
+      // More friendly format: "January 1, 2023"
+      return date.toLocaleDateString('en-US', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      });
+    }
   };
   
   const handleRefreshMessages = async () => {
@@ -228,31 +315,43 @@ export default function ChatPanel({ isMobile = false, onBackClick }: ChatPanelPr
             <p className="text-sm mt-2">Start the conversation by sending a message below</p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {messages.map((message) => (
-              <div 
-                key={message.id} 
-                className={`flex ${
-                  message.direction === 'incoming' ? 'justify-start' : 'justify-end'
-                }`}
-              >
-                <div 
-                  className={`max-w-[80%] md:max-w-[70%] p-3 rounded-lg break-words ${
-                    message.direction === 'incoming' 
-                      ? 'bg-white border border-gray-200 shadow-sm' 
-                      : 'bg-purple-600 text-white shadow-sm'
-                  }`}
-                >
-                  <p className="whitespace-pre-wrap">{message.message}</p>
-                  <p className={`text-xs mt-1 text-right ${
-                    message.direction === 'incoming' ? 'text-gray-500' : 'text-purple-200'
-                  }`}>
-                    {new Date(message.timestamp).toLocaleTimeString([], {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </p>
+          <div className="space-y-4">
+            {messageGroups.map((group, groupIndex) => (
+              <div key={group.date} className="space-y-3">
+                {/* Date separator */}
+                <div className="flex justify-center my-4">
+                  <div className="bg-gray-200 text-gray-600 text-xs px-3 py-1 rounded-full">
+                    {getReadableDate(group.date)}
+                  </div>
                 </div>
+                
+                {/* Messages in this group */}
+                {group.messages.map((message) => (
+                  <div 
+                    key={message.id} 
+                    className={`flex ${
+                      message.direction === 'incoming' ? 'justify-start' : 'justify-end'
+                    }`}
+                  >
+                    <div 
+                      className={`max-w-[80%] md:max-w-[70%] p-3 rounded-lg break-words ${
+                        message.direction === 'incoming' 
+                          ? 'bg-white border border-gray-200 shadow-sm' 
+                          : 'bg-purple-600 text-white shadow-sm'
+                      }`}
+                    >
+                      <p className="whitespace-pre-wrap">{message.message}</p>
+                      <p className={`text-xs mt-1 text-right ${
+                        message.direction === 'incoming' ? 'text-gray-500' : 'text-purple-200'
+                      }`}>
+                        {new Date(message.timestamp).toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                ))}
               </div>
             ))}
             <div ref={messagesEndRef} className="h-3" />
