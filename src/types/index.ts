@@ -1,4 +1,4 @@
-export interface Message {jj
+export interface Message {
   id: string;
   phoneNumber: string;
   message: string;
